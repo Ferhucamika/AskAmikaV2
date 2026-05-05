@@ -2,13 +2,18 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Build a production-ready internal chatbot for C-Level executives with intelligent multi-model routing, Council consensus feature, and Fabric data integration.
+**Goal:** Build a production-ready internal chatbot for C-Level executives with intelligent multi-model routing and a Council consensus feature. Fabric data integration is a follow-up milestone — the analyzer's `isBusinessContext` flag is wired in but does not yet branch.
 
 **Architecture:** Monolithic Next.js 14+ app deployed to Azure App Service. Server Actions handle model routing and MCP calls. React Server Components minimize client JS. Streaming responses for low-latency perception.
 
-**Tech Stack:** Next.js 14, TypeScript, Tailwind CSS, React 18, OpenAI/Anthropic/Google/xAI SDKs, Azure Cosmos DB, Entra ID (MSAL), MCP client library
+**Tech Stack:** Next.js 14, TypeScript, Tailwind CSS, React 18, Anthropic + OpenAI SDKs, Entra ID (MSAL), localStorage session history
 
-**Timeline:** 3-4 weeks (solo)
+**Timeline:** 2-3 weeks (solo)
+
+> **Scope notes (2026-05-05 revision):**
+> - **Models:** Claude 4.x (Opus/Sonnet/Haiku) and OpenAI only. Gemini and Grok are deferred until API keys are provisioned. The `LLMClient` interface keeps the architecture open for adding them later.
+> - **Persistence:** localStorage for the solo internal pilot. Cosmos DB integration is a follow-up milestone.
+> - **Fabric MCP:** Deferred. The analyzer's `isBusinessContext` flag is preserved so it can drive Fabric routing once the connector ships.
 
 ---
 
@@ -38,9 +43,11 @@ Expected output: Next.js 14 with TypeScript and Tailwind installed
 
 ```bash
 npm install @azure/msal-react @azure/msal-browser \
-  @anthropic-ai/sdk openai @google/generative-ai \
-  @cosmosdb/cosmos axios dotenv
+  @anthropic-ai/sdk openai \
+  axios dotenv
 ```
+
+> Note: Gemini (`@google/generative-ai`), xAI/Grok, and Cosmos (`@azure/cosmos`) packages are deliberately omitted from initial scope. Add them when their respective integrations ship.
 
 - [ ] **Step 3: Create environment template**
 
@@ -54,18 +61,16 @@ NEXT_PUBLIC_AZURE_AD_REDIRECT_URI=
 # API Keys (stored in Azure Key Vault in prod)
 ANTHROPIC_API_KEY=
 OPENAI_API_KEY=
-GOOGLE_API_KEY=
-XAI_API_KEY=
 
-# Cosmos DB
-COSMOS_ENDPOINT=
-COSMOS_KEY=
-COSMOS_DATABASE=AskAmika
-COSMOS_CONTAINER=sessions
-
-# Fabric
-FABRIC_API_ENDPOINT=
-FABRIC_WORKSPACE_ID=
+# Future milestones (uncomment when integrations ship):
+# GOOGLE_API_KEY=
+# XAI_API_KEY=
+# COSMOS_ENDPOINT=
+# COSMOS_KEY=
+# COSMOS_DATABASE=AskAmika
+# COSMOS_CONTAINER=sessions
+# FABRIC_API_ENDPOINT=
+# FABRIC_WORKSPACE_ID=
 ```
 
 - [ ] **Step 4: Create root layout with Amika colors**
@@ -341,7 +346,6 @@ export interface QuestionAnalysis {
   isBusinessContext: boolean
   confidence: number
   entities: string[]
-  fabricQuery?: string
 }
 
 export interface ModelResponse {
@@ -593,6 +597,8 @@ describe('Question Analyzer', () => {
 })
 ```
 
+> Note: `fabricQuery` extraction is deferred along with Fabric MCP. The `isBusinessContext` flag is preserved (logged but not branched on) so it can drive Fabric routing once the connector ships.
+
 - [ ] **Step 2: Run tests to verify they fail**
 
 ```bash
@@ -614,22 +620,20 @@ const ANALYSIS_PROMPT = `You are a question classifier. Analyze the following qu
 1. Is it about business/company data? (yes/no)
 2. Confidence level (0-1)
 3. Key entities mentioned (list)
-4. If business: what Fabric query would retrieve relevant data?
 
 Respond in JSON format:
 {
   "isBusinessContext": boolean,
   "confidence": number,
-  "entities": ["entity1", "entity2"],
-  "fabricQuery": "string or null"
+  "entities": ["entity1", "entity2"]
 }
 
 Question: {question}`
 
 export async function analyzeQuestion(question: string): Promise<QuestionAnalysis> {
   const response = await client.messages.create({
-    model: 'claude-3-5-haiku-20241022',
-    max_tokens: 200,
+    model: 'claude-haiku-4-5-20251001',
+    max_tokens: 150,
     messages: [
       {
         role: 'user',
@@ -646,8 +650,7 @@ export async function analyzeQuestion(question: string): Promise<QuestionAnalysi
   return {
     isBusinessContext: analysis.isBusinessContext,
     confidence: analysis.confidence,
-    entities: analysis.entities || [],
-    fabricQuery: analysis.fabricQuery || undefined
+    entities: analysis.entities || []
   }
 }
 ```
@@ -676,10 +679,10 @@ git commit -m "feat: implement question analysis with Haiku classifier"
 **Files:**
 - Create: `src/lib/llm/clients/claude.ts`
 - Create: `src/lib/llm/clients/openai.ts`
-- Create: `src/lib/llm/clients/gemini.ts`
-- Create: `src/lib/llm/clients/grok.ts`
 - Create: `src/lib/llm/types.ts`
 - Create: `tests/lib/llm/clients/claude.test.ts`
+
+> Gemini and Grok clients are deferred. The `LLMClient` interface allows them to be added later without changes to the router or chat API.
 
 - [ ] **Step 1: Define LLM client interface**
 
@@ -697,7 +700,7 @@ export interface LLMClient {
 export interface ModelConfig {
   id: string
   name: string
-  provider: 'anthropic' | 'openai' | 'google' | 'xai'
+  provider: 'anthropic' | 'openai'  // 'google' | 'xai' will be added when those integrations ship
   capabilities: ('analysis' | 'creative' | 'research' | 'code')[]
   rateLimit: number
 }
@@ -711,7 +714,7 @@ import { ClaudeClient } from '@/lib/llm/clients/claude'
 
 describe('Claude Client', () => {
   test('should stream response text', async () => {
-    const client = new ClaudeClient('claude-3-5-sonnet-20241022')
+    const client = new ClaudeClient('claude-sonnet-4-6')
     const messages = [{ role: 'user' as const, content: 'Say hello' }]
     
     let fullText = ''
@@ -723,7 +726,7 @@ describe('Claude Client', () => {
   })
 
   test('should complete message', async () => {
-    const client = new ClaudeClient('claude-3-5-sonnet-20241022')
+    const client = new ClaudeClient('claude-sonnet-4-6')
     const messages = [{ role: 'user' as const, content: 'Count to 3' }]
     
     const response = await client.complete(messages)
@@ -824,78 +827,7 @@ export class OpenAIClient implements LLMClient {
 }
 ```
 
-- [ ] **Step 5: Implement Gemini client (simplified)**
-
-Create `src/lib/llm/clients/gemini.ts`:
-```typescript
-import { GoogleGenerativeAI } from '@google/generative-ai'
-import { LLMClient } from '../types'
-
-export class GeminiClient implements LLMClient {
-  name = 'Gemini'
-  model: string
-  capabilities = ['research', 'analysis', 'creative']
-  
-  private client: GoogleGenerativeAI
-
-  constructor(model: string) {
-    this.model = model
-    this.client = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY)
-  }
-
-  async *stream(messages: Array<{ role: 'user' | 'assistant', content: string }>) {
-    const geminiModel = this.client.getGenerativeModel({ model: this.model })
-    const lastMessage = messages[messages.length - 1]?.content || ''
-    
-    const stream = geminiModel.generateContentStream(lastMessage)
-    
-    for await (const chunk of stream) {
-      yield chunk.text()
-    }
-  }
-
-  async complete(messages: Array<{ role: 'user' | 'assistant', content: string }>): Promise<string> {
-    let fullText = ''
-    for await (const chunk of this.stream(messages)) {
-      fullText += chunk
-    }
-    return fullText
-  }
-}
-```
-
-- [ ] **Step 6: Implement Grok client (stub)**
-
-Create `src/lib/llm/clients/grok.ts`:
-```typescript
-import { LLMClient } from '../types'
-
-export class GrokClient implements LLMClient {
-  name = 'Grok'
-  model: string
-  capabilities = ['creative', 'analysis']
-  
-  constructor(model: string) {
-    this.model = model
-  }
-
-  async *stream(messages: Array<{ role: 'user' | 'assistant', content: string }>) {
-    // xAI API integration - placeholder
-    // Will implement when xAI SDK is available
-    yield 'Grok response pending xAI API access'
-  }
-
-  async complete(messages: Array<{ role: 'user' | 'assistant', content: string }>): Promise<string> {
-    let fullText = ''
-    for await (const chunk of this.stream(messages)) {
-      fullText += chunk
-    }
-    return fullText
-  }
-}
-```
-
-- [ ] **Step 7: Run tests**
+- [ ] **Step 5: Run tests**
 
 ```bash
 npm test -- tests/lib/llm/clients/claude.test.ts
@@ -903,11 +835,11 @@ npm test -- tests/lib/llm/clients/claude.test.ts
 
 Expected: PASS (with valid API key)
 
-- [ ] **Step 8: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
 git add src/lib/llm/clients tests/lib/llm/clients
-git commit -m "feat: implement LLM client abstractions for Claude, OpenAI, Gemini, Grok"
+git commit -m "feat: implement Claude and OpenAI LLM client abstractions"
 ```
 
 ---
@@ -928,7 +860,7 @@ export const MODELS = [
     id: 'claude-opus',
     name: 'Claude Opus',
     provider: 'anthropic' as const,
-    model: 'claude-3-5-opus-20241022',
+    model: 'claude-opus-4-7',
     capabilities: ['analysis', 'complex-reasoning', 'code'] as const,
     speed: 'slow',
     cost: 'high'
@@ -937,7 +869,7 @@ export const MODELS = [
     id: 'claude-sonnet',
     name: 'Claude Sonnet',
     provider: 'anthropic' as const,
-    model: 'claude-3-5-sonnet-20241022',
+    model: 'claude-sonnet-4-6',
     capabilities: ['analysis', 'balanced', 'code'] as const,
     speed: 'medium',
     cost: 'medium'
@@ -946,30 +878,23 @@ export const MODELS = [
     id: 'claude-haiku',
     name: 'Claude Haiku',
     provider: 'anthropic' as const,
-    model: 'claude-3-5-haiku-20241022',
+    model: 'claude-haiku-4-5-20251001',
     capabilities: ['fast', 'classification'] as const,
     speed: 'very-fast',
     cost: 'low'
   },
   {
-    id: 'gpt-4-turbo',
-    name: 'GPT-4 Turbo',
+    id: 'openai-flagship',
+    name: 'OpenAI Flagship',
     provider: 'openai' as const,
-    model: 'gpt-4-turbo',
+    model: 'TODO-confirm-current-openai-model-id',  // TODO: confirm current OpenAI model ID at implementation time
     capabilities: ['analysis', 'multimodal', 'code'] as const,
     speed: 'medium',
     cost: 'high'
-  },
-  {
-    id: 'gemini-pro',
-    name: 'Gemini Pro',
-    provider: 'google' as const,
-    model: 'gemini-2.0-flash',
-    capabilities: ['research', 'analysis', 'synthesis'] as const,
-    speed: 'fast',
-    cost: 'medium'
   }
 ]
+
+// Future: add Gemini and Grok entries when API keys are provisioned.
 
 export const AMIKA_COLORS = {
   orange: '#FF6B26',
@@ -998,8 +923,7 @@ describe('Model Router', () => {
     const model = selectBestModel({
       isBusinessContext: true,
       confidence: 0.9,
-      entities: ['revenue', 'customer', 'quarterly analysis'],
-      fabricQuery: undefined
+      entities: ['revenue', 'customer', 'quarterly analysis']
     }, {})
     
     expect(model.id).toBe('claude-opus')
@@ -1009,22 +933,20 @@ describe('Model Router', () => {
     const model = selectBestModel({
       isBusinessContext: false,
       confidence: 0.95,
-      entities: [],
-      fabricQuery: undefined
+      entities: []
     }, {})
     
-    expect(['claude-haiku', 'gpt-4-turbo']).toContain(model.id)
+    expect(['claude-haiku', 'openai-flagship']).toContain(model.id)
   })
 
   test('should respect user override', () => {
     const model = selectBestModel({
       isBusinessContext: true,
       confidence: 0.9,
-      entities: ['revenue'],
-      fabricQuery: undefined
-    }, { overrideModelId: 'gemini-pro' })
+      entities: ['revenue']
+    }, { overrideModelId: 'claude-sonnet' })
     
-    expect(model.id).toBe('gemini-pro')
+    expect(model.id).toBe('claude-sonnet')
   })
 })
 ```
@@ -1126,7 +1048,6 @@ import { selectBestModel } from '@/lib/llm/router'
 import { MODELS } from '@/lib/constants'
 import { ClaudeClient } from '@/lib/llm/clients/claude'
 import { OpenAIClient } from '@/lib/llm/clients/openai'
-import { GeminiClient } from '@/lib/llm/clients/gemini'
 
 export async function POST(request: NextRequest) {
   const { question, overrideModelId } = await request.json()
@@ -1136,8 +1057,9 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    // Step 1: Analyze question
+    // Step 1: Analyze question (logs isBusinessContext for future Fabric routing)
     const analysis = await analyzeQuestion(question)
+    console.log('Question analysis:', analysis)
 
     // Step 2: Select best model
     const selectedModel = selectBestModel(analysis, { overrideModelId })
@@ -1148,8 +1070,6 @@ export async function POST(request: NextRequest) {
       client = new ClaudeClient(selectedModel.model)
     } else if (selectedModel.provider === 'openai') {
       client = new OpenAIClient(selectedModel.model)
-    } else if (selectedModel.provider === 'google') {
-      client = new GeminiClient(selectedModel.model)
     } else {
       return NextResponse.json({ error: 'Model not supported' }, { status: 400 })
     }
@@ -1313,7 +1233,7 @@ git commit -m "feat: implement streaming chat API with intelligent model routing
 
 ---
 
-## Phase 4: Advanced Features (Days 11-20)
+## Phase 4: Advanced Features (Days 11-15)
 
 ### Task 8: Artifact Detection & Rendering
 
@@ -1562,7 +1482,6 @@ import { selectBestModel } from '@/lib/llm/router'
 import { MODELS } from '@/lib/constants'
 import { ClaudeClient } from '@/lib/llm/clients/claude'
 import { OpenAIClient } from '@/lib/llm/clients/openai'
-import { GeminiClient } from '@/lib/llm/clients/gemini'
 import { synthesizeResponses } from '@/lib/llm/orchestrator'
 
 export async function POST(request: NextRequest) {
@@ -1576,8 +1495,8 @@ export async function POST(request: NextRequest) {
     // Get 3 models (user-specified or auto-selected)
     const selectedModelIds = modelIds || [
       'claude-opus',
-      'gpt-4-turbo',
-      'gemini-pro'
+      'claude-sonnet',
+      'openai-flagship'
     ]
 
     const selectedModels = MODELS.filter(m => selectedModelIds.includes(m.id))
@@ -1594,8 +1513,6 @@ export async function POST(request: NextRequest) {
         client = new ClaudeClient(model.model)
       } else if (model.provider === 'openai') {
         client = new OpenAIClient(model.model)
-      } else if (model.provider === 'google') {
-        client = new GeminiClient(model.model)
       } else {
         continue
       }
@@ -1610,7 +1527,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get orchestrator summary
-    const orchestratorClient = new ClaudeClient('claude-3-5-opus-20241022')
+    const orchestratorClient = new ClaudeClient('claude-opus-4-7')
     const summaryPrompt = `You are synthesizing responses from 3 different AI models. Your task is to:
 1. Identify key points of agreement
 2. Highlight important disagreements
@@ -1696,7 +1613,7 @@ export default function CouncilView({ question, isVisible }: CouncilViewProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           question,
-          modelIds: ['claude-opus', 'gpt-4-turbo', 'gemini-pro']
+          modelIds: ['claude-opus', 'claude-sonnet', 'openai-flagship']
         })
       })
 
@@ -1798,61 +1715,19 @@ git commit -m "feat: implement Council feature with 3-model comparison and orche
 
 ---
 
-### Task 10: Cosmos DB Session History
+### Task 10: localStorage Session History
+
+> Cosmos DB persistence is a follow-up milestone. localStorage is sufficient for the solo internal pilot. The `SessionDocument` schema below is identical to what Cosmos will use, so the future swap is a one-file change in `src/lib/storage/sessions.ts`.
 
 **Files:**
-- Create: `src/lib/db/cosmos.ts`
-- Create: `src/lib/db/schemas.ts`
+- Create: `src/lib/storage/sessions.ts`
+- Create: `src/lib/storage/schemas.ts`
+- Create: `tests/lib/storage/sessions.test.ts`
 - Modify: `src/components/ChatInterface.tsx`
 
-- [ ] **Step 1: Create Cosmos DB client**
+- [ ] **Step 1: Define session schemas**
 
-Create `src/lib/db/cosmos.ts`:
-```typescript
-import { CosmosClient } from '@azure/cosmos'
-
-const client = new CosmosClient({
-  endpoint: process.env.COSMOS_ENDPOINT || '',
-  key: process.env.COSMOS_KEY || ''
-})
-
-export const database = client.database(process.env.COSMOS_DATABASE || 'AskAmika')
-export const sessionsContainer = database.container(process.env.COSMOS_CONTAINER || 'sessions')
-
-export async function saveSession(session: any) {
-  try {
-    const { resource } = await sessionsContainer.items.create(session)
-    return resource
-  } catch (error) {
-    console.error('Failed to save session:', error)
-    throw error
-  }
-}
-
-export async function getSession(sessionId: string) {
-  try {
-    const { resource } = await sessionsContainer.item(sessionId).read()
-    return resource
-  } catch (error) {
-    console.error('Failed to get session:', error)
-    return null
-  }
-}
-
-export async function updateSession(sessionId: string, updates: any) {
-  try {
-    const { resource } = await sessionsContainer.item(sessionId).replace(updates)
-    return resource
-  } catch (error) {
-    console.error('Failed to update session:', error)
-    throw error
-  }
-}
-```
-
-- [ ] **Step 2: Create data schemas**
-
-Create `src/lib/db/schemas.ts`:
+Create `src/lib/storage/schemas.ts`:
 ```typescript
 export interface SessionDocument {
   id: string
@@ -1901,129 +1776,113 @@ export function createSessionDocument(userId: string, title: string = 'New Chat'
 }
 ```
 
-- [ ] **Step 3: Update ChatInterface to persist sessions**
+- [ ] **Step 2: Write failing tests for localStorage session store**
 
-Modify `src/components/ChatInterface.tsx` to save to Cosmos:
+Create `tests/lib/storage/sessions.test.ts`:
 ```typescript
-// Add session tracking
-const [sessionId, setSessionId] = useState<string>('')
+import { saveSession, getSession, listSessions } from '@/lib/storage/sessions'
+import { createSessionDocument } from '@/lib/storage/schemas'
 
-// On component mount, create session:
-useEffect(() => {
-  const newSessionId = `session-${Date.now()}`
-  setSessionId(newSessionId)
-}, [])
+beforeEach(() => {
+  localStorage.clear()
+})
 
-// After each message, save:
-useEffect(() => {
-  if (sessionId && messages.length > 0) {
-    // In production: call API to save to Cosmos
-    // for now, just log
-    console.log('Saving session:', sessionId, messages)
-  }
-}, [messages, sessionId])
-```
-
-- [ ] **Step 4: Commit**
-
-```bash
-git add src/lib/db src/components/ChatInterface.tsx
-git commit -m "feat: add Cosmos DB session history persistence"
-```
-
----
-
-### Task 11: MCP/Fabric Integration (Placeholder)
-
-**Files:**
-- Create: `src/lib/mcp/fabric.ts`
-- Create: `tests/lib/mcp/fabric.test.ts`
-
-- [ ] **Step 1: Create Fabric MCP client (stub)**
-
-Create `src/lib/mcp/fabric.ts`:
-```typescript
-import { QuestionAnalysis } from '@/lib/types'
-
-export interface FabricQueryResult {
-  data: any[]
-  metadata: {
-    queryTime: number
-    rowCount: number
-  }
-}
-
-export async function queryFabric(analysis: QuestionAnalysis): Promise<FabricQueryResult> {
-  // Placeholder for Fabric MCP integration
-  // In production, this would:
-  // 1. Connect to Fabric API via MCP
-  // 2. Build natural language query from entities
-  // 3. Execute query
-  // 4. Return structured results
-
-  console.log('Querying Fabric with entities:', analysis.entities)
-  
-  return {
-    data: [],
-    metadata: {
-      queryTime: 0,
-      rowCount: 0
-    }
-  }
-}
-
-export async function connectToFabric() {
-  // Initialize Fabric MCP connection
-  console.log('Connecting to Fabric...')
-  // Implementation pending Fabric SDK availability
-}
-```
-
-- [ ] **Step 2: Write tests for Fabric integration**
-
-Create `tests/lib/mcp/fabric.test.ts`:
-```typescript
-import { queryFabric } from '@/lib/mcp/fabric'
-
-describe('Fabric Integration', () => {
-  test('should construct fabric query from business analysis', async () => {
-    const analysis = {
-      isBusinessContext: true,
-      confidence: 0.9,
-      entities: ['Product X', 'Customer Y', 'Q3'],
-      fabricQuery: 'SELECT sales FROM products WHERE name=\'Product X\' AND customer=\'Customer Y\''
-    }
-
-    const result = await queryFabric(analysis)
-    expect(result.metadata).toBeDefined()
+describe('localStorage session store', () => {
+  test('should save and retrieve a session by id', () => {
+    const session = createSessionDocument('user-1', 'Test session')
+    saveSession(session)
+    expect(getSession(session.id)).toEqual(session)
   })
 
-  test('should handle query errors gracefully', async () => {
-    const analysis = {
-      isBusinessContext: true,
-      confidence: 0.8,
-      entities: [],
-      fabricQuery: undefined
-    }
-
-    const result = await queryFabric(analysis)
-    expect(result.data).toEqual([])
+  test('should list all sessions for a user', () => {
+    const a = createSessionDocument('user-1', 'A')
+    const b = createSessionDocument('user-1', 'B')
+    const c = createSessionDocument('user-2', 'C')
+    saveSession(a); saveSession(b); saveSession(c)
+    const list = listSessions('user-1')
+    expect(list).toHaveLength(2)
   })
 })
 ```
 
-- [ ] **Step 3: Commit**
+- [ ] **Step 3: Implement localStorage session store**
+
+Create `src/lib/storage/sessions.ts`:
+```typescript
+import { SessionDocument } from './schemas'
+
+const KEY_PREFIX = 'askamika.session.'
+
+export function saveSession(session: SessionDocument): void {
+  session.updatedAt = new Date().toISOString()
+  localStorage.setItem(KEY_PREFIX + session.id, JSON.stringify(session))
+}
+
+export function getSession(sessionId: string): SessionDocument | null {
+  const raw = localStorage.getItem(KEY_PREFIX + sessionId)
+  return raw ? (JSON.parse(raw) as SessionDocument) : null
+}
+
+export function listSessions(userId: string): SessionDocument[] {
+  const sessions: SessionDocument[] = []
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i)
+    if (!key?.startsWith(KEY_PREFIX)) continue
+    const raw = localStorage.getItem(key)
+    if (!raw) continue
+    const session = JSON.parse(raw) as SessionDocument
+    if (session.userId === userId) sessions.push(session)
+  }
+  return sessions.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+}
+
+export function deleteSession(sessionId: string): void {
+  localStorage.removeItem(KEY_PREFIX + sessionId)
+}
+```
+
+- [ ] **Step 4: Wire ChatInterface to persist sessions**
+
+Modify `src/components/ChatInterface.tsx`:
+```typescript
+import { useEffect, useState } from 'react'
+import { saveSession } from '@/lib/storage/sessions'
+import { createSessionDocument, SessionDocument } from '@/lib/storage/schemas'
+
+const [session, setSession] = useState<SessionDocument | null>(null)
+
+useEffect(() => {
+  // Replace 'pilot-user' with the authenticated user's id once auth is wired in
+  setSession(createSessionDocument('pilot-user'))
+}, [])
+
+useEffect(() => {
+  if (!session) return
+  saveSession({
+    ...session,
+    messages: messages.map(m => ({
+      id: m.id,
+      role: m.role,
+      content: m.content,
+      timestamp: m.timestamp.toISOString(),
+      model: m.model
+    }))
+  })
+}, [messages, session])
+```
+
+- [ ] **Step 5: Commit**
 
 ```bash
-git add src/lib/mcp/fabric.ts tests/lib/mcp/fabric.test.ts
-git commit -m "feat: add Fabric MCP client stub for future integration"
+git add src/lib/storage src/components/ChatInterface.tsx tests/lib/storage
+git commit -m "feat: add localStorage session history (Cosmos swap-in later)"
 ```
 
 ---
 
-## Phase 5: Testing & Deployment (Days 21-28)
+## Phase 5: Testing & Deployment (Days 16-21)
 
-### Task 12: Integration Tests & Error Handling
+### Task 11: Integration Tests & Error Handling
 
 - [ ] **Step 1: Write end-to-end chat flow test**
 
@@ -2062,10 +1921,6 @@ describe('Error Handling', () => {
   test('should handle auth failures', async () => {
     // Test auth error handling
   })
-
-  test('should gracefully degrade when Fabric unavailable', async () => {
-    // Test fallback to general question handling
-  })
 })
 ```
 
@@ -2084,7 +1939,7 @@ git commit -m "test: add comprehensive integration and error scenario tests"
 
 ---
 
-### Task 13: Azure Deployment Setup
+### Task 12: Azure Deployment Setup
 
 **Files:**
 - Create: `azure-deploy.yml` (GitHub Actions)
@@ -2167,7 +2022,7 @@ git commit -m "feat: add Docker configuration and Azure deployment pipeline"
 
 ---
 
-### Task 14: Final Integration & Verification
+### Task 13: Final Integration & Verification
 
 - [ ] **Step 1: Run full test suite**
 
@@ -2212,7 +2067,7 @@ git commit --allow-empty -m "docs: AskAmika MVP complete - ready for production"
 - [ ] Responses stream in real-time (<5 sec)
 - [ ] Artifacts auto-generate for code/documents
 - [ ] Council feature shows 3 models + orchestrator
-- [ ] Session history persists in Cosmos DB
+- [ ] Session history persists in localStorage (Cosmos DB swap-in is a follow-up milestone)
 - [ ] Error handling graceful with user messaging
 - [ ] All tests passing
 - [ ] Deployed to Azure App Service
@@ -2225,7 +2080,7 @@ git commit --allow-empty -m "docs: AskAmika MVP complete - ready for production"
 
 - **Model fallback chains:** If primary model fails, automatically retry with backup model
 - **Rate limiting:** Implement exponential backoff for API calls
-- **Caching:** Cache Fabric queries (5 min TTL) to avoid redundant data calls
+- **Caching:** When Fabric is wired in (follow-up milestone), cache queries with a 5 min TTL to avoid redundant data calls
 - **Analytics:** Log all questions + model selections for future optimization
 - **Security:** Never log full responses or API keys, validate all user input
 - **Monitoring:** Set up Azure Application Insights for performance tracking

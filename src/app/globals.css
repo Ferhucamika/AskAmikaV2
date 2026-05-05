@@ -1,0 +1,56 @@
+@import "tailwindcss";
+
+:root {
+  --amika-orange: #FF6B26;
+  --amika-orange-bright: #FF7A00;
+  --amika-pink: #FB63C0;
+  --amika-hot-pink: #EC008C;
+  --amika-yellow: #FFBF00;
+  --amika-blue: #38B6FF;
+  --amika-lime: #C9E167;
+  --amika-coral: #FF5555;
+  --amika-black: #000000;
+  --amika-white: #FFFFFF;
+  --amika-gray-light: #DDDDDD;
+  --amika-gray-text: #6A6A6A;
+}
+
+@theme inline {
+  --color-amika-orange: var(--amika-orange);
+  --color-amika-orange-bright: var(--amika-orange-bright);
+  --color-amika-pink: var(--amika-pink);
+  --color-amika-hot-pink: var(--amika-hot-pink);
+  --color-amika-yellow: var(--amika-yellow);
+  --color-amika-blue: var(--amika-blue);
+  --color-amika-lime: var(--amika-lime);
+  --color-amika-coral: var(--amika-coral);
+  --color-amika-gray-light: var(--amika-gray-light);
+  --color-amika-gray-text: var(--amika-gray-text);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background-color: var(--amika-white);
+  color: var(--amika-black);
+}
+
+@layer components {
+  .btn-primary {
+    @apply px-4 py-2 rounded-lg font-semibold text-white;
+    background-color: var(--amika-orange);
+  }
+
+  .btn-primary:hover {
+    background-color: var(--amika-orange-bright);
+  }
+
+  .btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .input-focus {
+    border-color: var(--amika-orange) !important;
+  }
+}

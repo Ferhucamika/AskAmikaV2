@@ -1,12 +1,22 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Message } from '@/lib/types';
 import QuestionInput from './QuestionInput';
+import CouncilView from './CouncilView';
 
 export default function ChatInterface() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [showCouncil, setShowCouncil] = useState(false);
+  const [councilKey, setCouncilKey] = useState(0);
+
+  const lastUserQuestion = useMemo(() => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].role === 'user') return messages[i].content;
+    }
+    return null;
+  }, [messages]);
 
   const handleQuestionSubmit = async (question: string) => {
     setIsLoading(true);
@@ -97,6 +107,23 @@ export default function ChatInterface() {
       </header>
 
       <main className="flex-1 overflow-y-auto p-6">
+        {lastUserQuestion && (
+          <div className="max-w-4xl mx-auto mb-4 flex justify-end">
+            <button
+              onClick={() => {
+                if (showCouncil) {
+                  setShowCouncil(false);
+                } else {
+                  setCouncilKey((k) => k + 1);
+                  setShowCouncil(true);
+                }
+              }}
+              className="btn-primary text-sm"
+            >
+              {showCouncil ? 'Hide Council' : 'Convene Council'}
+            </button>
+          </div>
+        )}
         <div className="space-y-4">
           {messages.map((msg) => (
             <div
@@ -124,6 +151,12 @@ export default function ChatInterface() {
             </div>
           ))}
         </div>
+
+        {showCouncil && lastUserQuestion && (
+          <div className="max-w-4xl mx-auto">
+            <CouncilView key={councilKey} question={lastUserQuestion} />
+          </div>
+        )}
       </main>
 
       <footer

@@ -1,9 +1,15 @@
+'use client';
+
+import { useIsAuthenticated } from '@azure/msal-react';
+import ChatInterface from '@/components/ChatInterface';
+import Login from '@/components/Login';
+
 export default function Home() {
-  return (
-    <main className="min-h-screen flex items-center justify-center">
-      <h1 className="text-4xl font-bold" style={{ color: 'var(--amika-orange)' }}>
-        AskAmika
-      </h1>
-    </main>
-  );
+  const isAuthenticated = useIsAuthenticated();
+
+  if (!isAuthenticated) {
+    return <Login />;
+  }
+
+  return <ChatInterface />;
 }

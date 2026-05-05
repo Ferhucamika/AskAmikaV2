@@ -19,8 +19,65 @@ export default function ChatInterface() {
     };
     setMessages((prev) => [...prev, userMessage]);
 
-    // Chat API wiring lands in Task 7. For now this is UI-only.
-    setIsLoading(false);
+    const assistantId = (Date.now() + 1).toString();
+    let assistantContent = '';
+    let messageAdded = false;
+
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question }),
+      });
+
+      if (!response.ok || !response.body) {
+        throw new Error(`Chat API responded ${response.status}`);
+      }
+
+      const selectedModel = response.headers.get('X-Selected-Model') ?? undefined;
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        assistantContent += decoder.decode(value, { stream: true });
+
+        if (!messageAdded) {
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: assistantId,
+              role: 'assistant',
+              content: assistantContent,
+              model: selectedModel,
+              timestamp: new Date(),
+            },
+          ]);
+          messageAdded = true;
+        } else {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === assistantId ? { ...m, content: assistantContent } : m
+            )
+          );
+        }
+      }
+    } catch (error) {
+      console.error('Failed to get response:', error);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: assistantId,
+          role: 'assistant',
+          content: 'Error: Failed to get response. Please try again.',
+          timestamp: new Date(),
+        },
+      ]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -55,7 +112,15 @@ export default function ChatInterface() {
                 color: msg.role === 'user' ? 'white' : 'black',
               }}
             >
-              {msg.content}
+              {msg.model && msg.role === 'assistant' && (
+                <div
+                  className="text-xs mb-2 font-medium"
+                  style={{ color: 'var(--amika-gray-text)' }}
+                >
+                  {msg.model}
+                </div>
+              )}
+              <div className="whitespace-pre-wrap">{msg.content}</div>
             </div>
           ))}
         </div>

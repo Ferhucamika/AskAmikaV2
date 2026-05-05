@@ -42,10 +42,9 @@ export const MODELS: ModelEntry[] = [
   },
   {
     id: 'openai-flagship',
-    name: 'OpenAI Flagship',
+    name: 'GPT-5.5',
     provider: 'openai',
-    // TODO: confirm current OpenAI model ID before Task 7 fires the API
-    model: 'TODO-confirm-current-openai-model-id',
+    model: 'gpt-5.5',
     capabilities: ['analysis', 'multimodal', 'code'],
     speed: 'medium',
     cost: 'high',

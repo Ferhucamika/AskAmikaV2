@@ -1,15 +1,45 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Message } from '@/lib/types';
+import { createSessionDocument, SessionDocument } from '@/lib/storage/schemas';
+import { saveSession } from '@/lib/storage/sessions';
 import QuestionInput from './QuestionInput';
 import CouncilView from './CouncilView';
+
+const PILOT_USER_ID = 'pilot-user'; // Replace with the authenticated user's id once MSAL is fully wired.
 
 export default function ChatInterface() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showCouncil, setShowCouncil] = useState(false);
   const [councilKey, setCouncilKey] = useState(0);
+  const [session, setSession] = useState<SessionDocument | null>(null);
+
+  useEffect(() => {
+    setSession(createSessionDocument(PILOT_USER_ID));
+  }, []);
+
+  useEffect(() => {
+    if (!session || isLoading || messages.length === 0) return;
+    saveSession({
+      ...session,
+      title: messages[0]?.content.slice(0, 60) ?? session.title,
+      messages: messages.map((m) => ({
+        id: m.id,
+        role: m.role,
+        content: m.content,
+        timestamp: m.timestamp.toISOString(),
+        model: m.model,
+      })),
+      metadata: {
+        modelUsed:
+          [...messages].reverse().find((m) => m.role === 'assistant' && m.model)
+            ?.model ?? '',
+        questionsAsked: messages.filter((m) => m.role === 'user').length,
+      },
+    });
+  }, [messages, isLoading, session]);
 
   const lastUserQuestion = useMemo(() => {
     for (let i = messages.length - 1; i >= 0; i--) {

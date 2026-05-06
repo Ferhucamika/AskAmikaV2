@@ -8,6 +8,8 @@ import { saveSession } from '@/lib/storage/sessions';
 import ArtifactPanel from './ArtifactPanel';
 import QuestionInput from './QuestionInput';
 import CouncilView from './CouncilView';
+import ModelSelector from './ModelSelector';
+import CouncilTabs from './CouncilTabs';
 
 const PILOT_USER_ID = 'pilot-user'; // Replace with the authenticated user's id once MSAL is fully wired.
 
@@ -19,6 +21,11 @@ export default function ChatInterface() {
   const [session, setSession] = useState<SessionDocument | null>(null);
   const [artifacts, setArtifacts] = useState<Artifact[]>([]);
   const [showArtifacts, setShowArtifacts] = useState(false);
+  const [selectedModelId, setSelectedModelId] = useState<string | undefined>();
+  const [councilResults, setCouncilResults] = useState<{
+    responses: Array<{ model: string; response: string }>;
+    orchestratorSummary: string;
+  } | null>(null);
 
   useEffect(() => {
     setSession(createSessionDocument(PILOT_USER_ID));
@@ -52,6 +59,22 @@ export default function ChatInterface() {
     return null;
   }, [messages]);
 
+  const handleConveneCouncil = async () => {
+    if (!lastUserQuestion) return;
+    try {
+      const response = await fetch('/api/council', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question: lastUserQuestion }),
+      });
+      const data = await response.json();
+      setCouncilResults(data);
+      setShowCouncil(true);
+    } catch (error) {
+      console.error('Council error:', error);
+    }
+  };
+
   const handleQuestionSubmit = async (question: string) => {
     setIsLoading(true);
     setArtifacts([]);
@@ -73,7 +96,7 @@ export default function ChatInterface() {
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question }),
+        body: JSON.stringify({ question, overrideModelId: selectedModelId }),
       });
 
       if (!response.ok || !response.body) {
@@ -149,26 +172,40 @@ export default function ChatInterface() {
             'linear-gradient(135deg, var(--amika-orange), var(--amika-pink))',
         }}
       >
-        <h1 className="text-3xl font-bold text-white">AskAmika</h1>
-        <p className="text-white/80">C-Level Decision Support</p>
+        <div className="flex justify-between items-start mb-4">
+          <div>
+            <h1 className="text-3xl font-bold text-white">AskAmika</h1>
+            <p className="text-white/80">C-Level Decision Support</p>
+          </div>
+          <ModelSelector
+            selectedModelId={selectedModelId}
+            onChange={setSelectedModelId}
+          />
+        </div>
       </header>
 
       <main className="flex-1 overflow-y-auto p-6">
         {lastUserQuestion && (
           <div className="max-w-4xl mx-auto mb-4 flex justify-end">
             <button
-              onClick={() => {
-                if (showCouncil) {
-                  setShowCouncil(false);
-                } else {
-                  setCouncilKey((k) => k + 1);
-                  setShowCouncil(true);
-                }
-              }}
+              onClick={handleConveneCouncil}
               className="btn-primary text-sm"
+              disabled={isLoading}
             >
-              {showCouncil ? 'Hide Council' : 'Convene Council'}
+              {isLoading ? 'Convening...' : 'Convene Council'}
             </button>
+            {showCouncil && (
+              <button
+                onClick={() => setShowCouncil(false)}
+                className="ml-2 text-sm px-3 py-1 rounded"
+                style={{
+                  backgroundColor: 'var(--amika-gray-light)',
+                  color: 'var(--amika-gray-text)',
+                }}
+              >
+                Hide Council
+              </button>
+            )}
           </div>
         )}
         <div className="space-y-4">
@@ -199,9 +236,13 @@ export default function ChatInterface() {
           ))}
         </div>
 
-        {showCouncil && lastUserQuestion && (
-          <div className="max-w-4xl mx-auto">
-            <CouncilView key={councilKey} question={lastUserQuestion} />
+        {showCouncil && councilResults && (
+          <div className="max-w-4xl mx-auto mt-6">
+            <h2 className="text-xl font-bold mb-4">Council Results</h2>
+            <CouncilTabs
+              responses={councilResults.responses}
+              orchestratorSummary={councilResults.orchestratorSummary}
+            />
           </div>
         )}
       </main>

@@ -77,6 +77,27 @@ describe('Question Analyzer', () => {
     expect(result.entities).toEqual([]);
   });
 
+  test('should handle markdown-wrapped JSON response', async () => {
+    const payload = {
+      isBusinessContext: true,
+      confidence: 0.88,
+      entities: ['entity1'],
+    };
+    mockCreate.mockResolvedValue({
+      content: [
+        {
+          type: 'text',
+          text: `\`\`\`json\n${JSON.stringify(payload)}\n\`\`\``,
+        },
+      ],
+    });
+
+    const result = await analyzeQuestion('test question');
+    expect(result.isBusinessContext).toBe(true);
+    expect(result.confidence).toBe(0.88);
+    expect(result.entities).toEqual(['entity1']);
+  });
+
   test('should throw on non-text response content', async () => {
     mockCreate.mockResolvedValue({
       content: [{ type: 'image', source: {} }],

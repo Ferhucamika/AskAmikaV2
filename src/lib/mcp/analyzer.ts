@@ -47,7 +47,13 @@ export async function analyzeQuestion(question: string): Promise<QuestionAnalysi
     throw new Error('Unexpected response type from Anthropic');
   }
 
-  const analysis = JSON.parse(block.text) as RawAnalysis;
+  let jsonText = block.text.trim();
+  const jsonMatch = jsonText.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+  if (jsonMatch) {
+    jsonText = jsonMatch[1];
+  }
+
+  const analysis = JSON.parse(jsonText) as RawAnalysis;
 
   return {
     isBusinessContext: analysis.isBusinessContext,

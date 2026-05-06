@@ -16,6 +16,10 @@ export default function CouncilTabs({
   responses,
   orchestratorSummary,
 }: CouncilTabsProps) {
+  if (!responses || responses.length === 0) {
+    return null;
+  }
+
   const [activeTab, setActiveTab] = useState<'orchestrator' | number>('orchestrator');
 
   const tabs: Array<{ id: 'orchestrator' | number; label: string }> = [

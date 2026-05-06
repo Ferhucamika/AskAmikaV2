@@ -14,12 +14,14 @@ export class OpenAIClient implements LLMClient {
   }
 
   async *stream(messages: ChatMessage[]): AsyncIterable<string> {
-    const stream = await this.client.chat.completions.create({
+    const params = {
       model: this.model,
       messages: messages.map((m) => ({ role: m.role, content: m.content })),
       stream: true,
-      max_tokens: 4096,
-    });
+      max_completion_tokens: 4096,
+    };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const stream = await (this.client.chat.completions.create as any)(params);
 
     for await (const chunk of stream) {
       const delta = chunk.choices[0]?.delta?.content;

@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { analyzeQuestion } from '@/lib/mcp/analyzer';
 import { selectBestModel } from '@/lib/llm/router';
-import { ClaudeClient } from '@/lib/llm/clients/claude';
-import { OpenAIClient } from '@/lib/llm/clients/openai';
-import type { LLMClient } from '@/lib/llm/types';
+import { clientFor } from '@/lib/llm/factory';
 
 interface ChatRequestBody {
   question?: string;
@@ -24,12 +22,7 @@ export async function POST(request: NextRequest) {
 
     const selectedModel = selectBestModel(analysis, { overrideModelId });
 
-    let client: LLMClient;
-    if (selectedModel.provider === 'anthropic') {
-      client = new ClaudeClient(selectedModel.model);
-    } else {
-      client = new OpenAIClient(selectedModel.model);
-    }
+    const client = clientFor(selectedModel);
 
     const encoder = new TextEncoder();
     const stream = new ReadableStream<Uint8Array>({

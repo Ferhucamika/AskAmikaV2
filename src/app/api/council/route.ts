@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { MODELS, ModelEntry } from '@/lib/constants';
-import { ClaudeClient } from '@/lib/llm/clients/claude';
-import { OpenAIClient } from '@/lib/llm/clients/openai';
+import { clientFor } from '@/lib/llm/factory';
 import { synthesizeCouncilResponses } from '@/lib/llm/orchestrator';
-import type { LLMClient } from '@/lib/llm/types';
 
 interface CouncilRequestBody {
   question?: string;
@@ -12,10 +10,6 @@ interface CouncilRequestBody {
 
 const DEFAULT_MODEL_IDS = ['claude-opus', 'claude-sonnet', 'openai-flagship'];
 
-function clientFor(model: ModelEntry): LLMClient {
-  if (model.provider === 'anthropic') return new ClaudeClient(model.model);
-  return new OpenAIClient(model.model);
-}
 
 export async function POST(request: NextRequest) {
   const { question, modelIds } = (await request.json()) as CouncilRequestBody;

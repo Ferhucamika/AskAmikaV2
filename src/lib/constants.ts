@@ -1,6 +1,6 @@
 export type ModelSpeed = 'very-fast' | 'fast' | 'medium' | 'slow';
 export type ModelCost = 'low' | 'medium' | 'high';
-export type ModelProvider = 'anthropic' | 'openai';
+export type ModelProvider = 'anthropic' | 'openai' | 'google' | 'xai';
 
 export interface ModelEntry {
   id: string;
@@ -49,9 +49,25 @@ export const MODELS: ModelEntry[] = [
     speed: 'medium',
     cost: 'high',
   },
+  {
+    id: 'gemini-flash',
+    name: 'Gemini 2.5 Flash',
+    provider: 'google',
+    model: 'gemini-2.5-flash',
+    capabilities: ['analysis', 'multimodal', 'research', 'code'],
+    speed: 'fast',
+    cost: 'low',
+  },
+  {
+    id: 'grok',
+    name: 'Grok 3',
+    provider: 'xai',
+    model: 'grok-3',
+    capabilities: ['analysis', 'creative', 'research', 'code'],
+    speed: 'medium',
+    cost: 'medium',
+  },
 ];
-
-// Future: add Gemini and Grok entries when API keys are provisioned.
 
 export const AMIKA_COLORS = {
   orange: '#FF6B26',

@@ -1,0 +1,40 @@
+import OpenAI from 'openai';
+import { ChatMessage, LLMClient } from '../types';
+
+export class GrokClient implements LLMClient {
+  readonly name = 'Grok';
+  readonly model: string;
+  readonly capabilities = ['analysis', 'creative', 'research', 'code'];
+
+  private readonly client: OpenAI;
+
+  constructor(model: string) {
+    this.model = model;
+    this.client = new OpenAI({
+      apiKey: process.env.XAI_API_KEY,
+      baseURL: 'https://api.x.ai/v1',
+    });
+  }
+
+  async *stream(messages: ChatMessage[]): AsyncIterable<string> {
+    const stream = await this.client.chat.completions.create({
+      model: this.model,
+      messages: messages.map((m) => ({ role: m.role, content: m.content })),
+      stream: true,
+      max_tokens: 4096,
+    });
+
+    for await (const chunk of stream) {
+      const delta = chunk.choices[0]?.delta?.content;
+      if (delta) yield delta;
+    }
+  }
+
+  async complete(messages: ChatMessage[]): Promise<string> {
+    let fullText = '';
+    for await (const chunk of this.stream(messages)) {
+      fullText += chunk;
+    }
+    return fullText;
+  }
+}

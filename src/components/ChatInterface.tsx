@@ -1,9 +1,11 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Message } from '@/lib/types';
+import { Artifact, Message } from '@/lib/types';
+import { detectArtifacts } from '@/lib/artifacts/detector';
 import { createSessionDocument, SessionDocument } from '@/lib/storage/schemas';
 import { saveSession } from '@/lib/storage/sessions';
+import ArtifactPanel from './ArtifactPanel';
 import QuestionInput from './QuestionInput';
 import CouncilView from './CouncilView';
 
@@ -15,6 +17,8 @@ export default function ChatInterface() {
   const [showCouncil, setShowCouncil] = useState(false);
   const [councilKey, setCouncilKey] = useState(0);
   const [session, setSession] = useState<SessionDocument | null>(null);
+  const [artifacts, setArtifacts] = useState<Artifact[]>([]);
+  const [showArtifacts, setShowArtifacts] = useState(false);
 
   useEffect(() => {
     setSession(createSessionDocument(PILOT_USER_ID));
@@ -50,6 +54,8 @@ export default function ChatInterface() {
 
   const handleQuestionSubmit = async (question: string) => {
     setIsLoading(true);
+    setArtifacts([]);
+    setShowArtifacts(false);
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -104,6 +110,12 @@ export default function ChatInterface() {
           );
         }
       }
+
+      const detected = detectArtifacts(assistantContent);
+      if (detected.length > 0) {
+        setArtifacts(detected);
+        setShowArtifacts(true);
+      }
     } catch (error) {
       console.error('Failed to get response:', error);
       setMessages((prev) => [
@@ -125,6 +137,11 @@ export default function ChatInterface() {
       className="min-h-screen flex flex-col"
       style={{ backgroundColor: 'var(--amika-white)' }}
     >
+      <ArtifactPanel
+        artifacts={artifacts}
+        isOpen={showArtifacts}
+        onClose={() => setShowArtifacts(false)}
+      />
       <header
         className="p-6"
         style={{

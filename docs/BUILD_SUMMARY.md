@@ -70,14 +70,15 @@ All six are registered in `MODELS` and selectable as Council members or via `ove
 - `src/app/api/chat/route.ts` — POST handler: analyzer → router → client, streams as `text/plain`, exposes `X-Selected-Model` header
 
 ### Task 8 — Chat UI + Council feature
-- `src/components/ChatInterface.tsx` — gradient header, streaming message list (user right/orange, assistant left/gray), session persistence, "Convene Council" toggle
+- `src/components/ChatInterface.tsx` — gradient header, streaming message list (user right/orange, assistant left/gray), session persistence, "Convene Council" button
+- `src/components/ModelSelector.tsx` — dropdown in header to manually override model choice (or "Auto" for router)
+- `src/components/CouncilTabs.tsx` — tabbed interface showing 3 model responses + orchestrator, click to switch between them
 - `src/components/QuestionInput.tsx` — textarea + send button
 - `src/components/Login.tsx` — Entra ID sign-in screen
-- `src/app/page.tsx` — auth gate
+- `src/app/page.tsx` — auth gate (bypassed by `NEXT_PUBLIC_SKIP_AUTH=true` for local dev)
 - `src/lib/llm/orchestrator.ts` — `synthesizeCouncilResponses` via Opus
 - `src/app/api/council/route.ts` — 3 models in parallel (`Promise.all`), returns `{ responses, orchestratorSummary }`
-- `src/components/CouncilView.tsx` — 3-column layout, one per model
-- `src/components/OrchestratorSummary.tsx` — orange synthesis card
+- `src/components/CouncilView.tsx` — legacy 3-column view (kept for reference, replaced by CouncilTabs)
 
 ### Task 9 — Artifact detection + panel
 - `src/lib/artifacts/detector.ts` — regex detection: fenced code, JSON/YAML/CSV (data), markdown tables, multi-heading documents
@@ -122,13 +123,22 @@ All tests use mocked SDK calls — no live API keys needed to run `npm test`.
 
 ---
 
+## Local Testing (Ready Now)
+
+Run `npm run dev` and navigate to `http://localhost:3000`. Thanks to `NEXT_PUBLIC_SKIP_AUTH=true` in `.env.local`, the login gate is bypassed. To test models:
+
+1. **Chat**: Ask a question → router automatically selects the best model or use the dropdown to override
+2. **Council**: Click "Convene Council" → all 3 models run in parallel, results show in tabs (switch between them)
+3. **Artifacts**: Ask for code/JSON/tables → detected automatically, open in right-side panel
+4. **Models**: Dropdown in header lets you force a specific model instead of letting the router decide
+
 ## What's Left
 
 | Task | Requires |
 |---|---|
 | Task 13 — Azure staging/prod deploy | Azure CLI signed in, Key Vault secrets populated, Container App provisioned, GitHub OIDC federation wired |
-| Live MSAL login | Azure App Registration client ID in `.env.local` |
-| Activate Gemini | Set `GOOGLE_API_KEY` in `.env.local` |
-| Activate Grok | Set `XAI_API_KEY` in `.env.local` |
+| Live MSAL login (Step 3) | Azure App Registration client ID + tenant ID in `.env.local`, set `NEXT_PUBLIC_SKIP_AUTH=false` |
+| Activate Gemini (Step 1) | Set `GOOGLE_API_KEY` in `.env.local` |
+| Activate Grok (Step 2) | Set `XAI_API_KEY` in `.env.local` |
 | Cosmos DB persistence | Azure Cosmos account + key — swap out `src/lib/storage/sessions.ts` (schemas already match) |
 | Fabric MCP routing | Fabric connector — `isBusinessContext` flag already set by analyzer, not yet acted on |

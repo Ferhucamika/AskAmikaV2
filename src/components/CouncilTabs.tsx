@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import MarkdownMessage from './MarkdownMessage';
 
 interface Response {
   model: string;
@@ -55,21 +56,27 @@ export default function CouncilTabs({
       </div>
 
       <div className="p-4">
-        {activeTab === 'orchestrator' ? (
-          <div
-            className="rounded p-3 whitespace-pre-wrap text-sm"
-            style={{ backgroundColor: 'var(--amika-gray-light)' }}
-          >
-            {orchestratorSummary}
-          </div>
-        ) : (
-          <div
-            className="rounded p-3 whitespace-pre-wrap text-sm"
-            style={{ backgroundColor: 'var(--amika-gray-light)' }}
-          >
-            {responses[activeTab as number].response}
-          </div>
-        )}
+        <div
+          className="rounded p-3 text-sm"
+          style={{ backgroundColor: 'var(--amika-gray-light)' }}
+        >
+          {activeTab === 'orchestrator' ? (
+            <MarkdownMessage content={orchestratorSummary} />
+          ) : (
+            <>
+              <MarkdownMessage content={responses[activeTab as number].response} />
+              <div
+                className="text-xs mt-3 pt-2 border-t font-medium"
+                style={{
+                  color: 'var(--amika-gray-text)',
+                  borderColor: 'rgba(0,0,0,0.1)',
+                }}
+              >
+                Model: {responses[activeTab as number].model}
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

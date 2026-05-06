@@ -9,6 +9,10 @@ import ArtifactPanel from './ArtifactPanel';
 import QuestionInput from './QuestionInput';
 import ModelSelector from './ModelSelector';
 import CouncilTabs from './CouncilTabs';
+import CouncilModelPicker from './CouncilModelPicker';
+import MarkdownMessage from './MarkdownMessage';
+
+const DEFAULT_COUNCIL_IDS = ['claude-opus', 'claude-sonnet', 'openai-flagship'];
 
 const PILOT_USER_ID = 'pilot-user'; // Replace with the authenticated user's id once MSAL is fully wired.
 
@@ -24,6 +28,8 @@ export default function ChatInterface() {
     responses: Array<{ model: string; response: string }>;
     orchestratorSummary: string;
   } | null>(null);
+  const [councilModelIds, setCouncilModelIds] = useState<string[]>(DEFAULT_COUNCIL_IDS);
+  const [councilLoading, setCouncilLoading] = useState(false);
 
   useEffect(() => {
     setSession(createSessionDocument(PILOT_USER_ID));
@@ -58,18 +64,31 @@ export default function ChatInterface() {
   }, [messages]);
 
   const handleConveneCouncil = async () => {
-    if (!lastUserQuestion) return;
+    if (!lastUserQuestion) {
+      alert('Ask a question first, then convene the Council.');
+      return;
+    }
+    if (councilModelIds.length < 3) {
+      alert('Pick at least 3 models for the Council.');
+      return;
+    }
+    setCouncilLoading(true);
     try {
       const response = await fetch('/api/council', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question: lastUserQuestion }),
+        body: JSON.stringify({
+          question: lastUserQuestion,
+          modelIds: councilModelIds,
+        }),
       });
       const data = await response.json();
       setCouncilResults(data);
       setShowCouncil(true);
     } catch (error) {
       console.error('Council error:', error);
+    } finally {
+      setCouncilLoading(false);
     }
   };
 
@@ -190,15 +209,22 @@ export default function ChatInterface() {
                 color: msg.role === 'user' ? 'white' : 'black',
               }}
             >
+              {msg.role === 'assistant' ? (
+                <MarkdownMessage content={msg.content} />
+              ) : (
+                <div className="whitespace-pre-wrap">{msg.content}</div>
+              )}
               {msg.model && msg.role === 'assistant' && (
                 <div
-                  className="text-xs mb-2 font-medium"
-                  style={{ color: 'var(--amika-gray-text)' }}
+                  className="text-xs mt-3 pt-2 border-t font-medium"
+                  style={{
+                    color: 'var(--amika-gray-text)',
+                    borderColor: 'rgba(0,0,0,0.1)',
+                  }}
                 >
-                  {msg.model}
+                  Model: {msg.model}
                 </div>
               )}
-              <div className="whitespace-pre-wrap">{msg.content}</div>
             </div>
           ))}
         </div>
@@ -230,13 +256,16 @@ export default function ChatInterface() {
               />
             </div>
             <div className="flex items-center gap-2">
+              <CouncilModelPicker
+                selectedIds={councilModelIds}
+                onChange={setCouncilModelIds}
+              />
               <button
                 onClick={handleConveneCouncil}
-                className="btn-primary text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={isLoading || !lastUserQuestion}
-                title={!lastUserQuestion ? 'Ask a question first' : 'Convene Council'}
+                className="btn-primary text-sm"
+                disabled={councilLoading}
               >
-                {isLoading ? 'Convening...' : 'Convene Council'}
+                {councilLoading ? 'Convening...' : 'Convene Council'}
               </button>
               {showCouncil && (
                 <button

@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { analyzeQuestion } from '@/lib/mcp/analyzer';
 import { selectBestModel } from '@/lib/llm/router';
 import { clientFor } from '@/lib/llm/factory';
+import { analyzeFabricNeeds } from '@/lib/fabric/analyzer';
+import { generateDAXQuery } from '@/lib/fabric/dax-generator';
+import { getFabricClient } from '@/lib/fabric/client';
 
 interface ChatRequestBody {
   question?: string;
@@ -17,26 +20,75 @@ export async function POST(request: NextRequest) {
 
   try {
     const analysis = await analyzeQuestion(question);
-    // Logged for future Fabric routing; not branched on yet.
     console.log('Question analysis:', analysis);
 
     const selectedModel = selectBestModel(analysis, { overrideModelId });
-
     const client = clientFor(selectedModel);
 
+    // Step 1: Get initial LLM response
+    let initialResponse = '';
+    for await (const chunk of client.stream([
+      { role: 'user', content: question },
+    ])) {
+      initialResponse += chunk;
+    }
+
+    // Step 2: Check if Fabric data is needed (only for business context)
+    let finalResponse = initialResponse;
+    if (analysis.isBusinessContext && analysis.semanticModel) {
+      try {
+        const fabricNeeds = await analyzeFabricNeeds(
+          question,
+          initialResponse,
+          analysis
+        );
+
+        // Step 3: If Fabric data is needed, fetch it and re-answer
+        if (fabricNeeds.isNeeded) {
+          const daxQuery = await generateDAXQuery(
+            question,
+            analysis.entities,
+            analysis.semanticModel
+          );
+
+          const fabricClient = getFabricClient();
+          const fabricResults = await fabricClient.executeDAX(
+            analysis.semanticModel,
+            daxQuery
+          );
+
+          // Step 4: Re-prompt LLM with Fabric data for enhanced answer
+          const enhancedPrompt = `Original question: ${question}
+
+Your initial response was:
+${initialResponse}
+
+Here is relevant data from our business system (${analysis.semanticModel}):
+${JSON.stringify(fabricResults.result, null, 2)}
+
+Please provide an enhanced answer that incorporates this real business data. Be specific and reference the actual data points.`;
+
+          let enhancedResponse = '';
+          for await (const chunk of client.stream([
+            { role: 'user', content: enhancedPrompt },
+          ])) {
+            enhancedResponse += chunk;
+          }
+
+          finalResponse = enhancedResponse;
+        }
+      } catch (fabricError) {
+        console.error('Error in Fabric routing:', fabricError);
+        // Fall back to initial response if Fabric fails
+      }
+    }
+
+    // Stream the final response
     const encoder = new TextEncoder();
     const stream = new ReadableStream<Uint8Array>({
-      async start(controller) {
-        try {
-          for await (const chunk of client.stream([
-            { role: 'user', content: question },
-          ])) {
-            controller.enqueue(encoder.encode(chunk));
-          }
-          controller.close();
-        } catch (error) {
-          controller.error(error);
-        }
+      start(controller) {
+        controller.enqueue(encoder.encode(finalResponse));
+        controller.close();
       },
     });
 

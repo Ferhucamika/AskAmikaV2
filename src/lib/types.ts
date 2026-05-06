@@ -19,6 +19,20 @@ export interface QuestionAnalysis {
   isBusinessContext: boolean;
   confidence: number;
   entities: string[];
+  semanticModel?: string;
+}
+
+export interface FabricAnalysisResult {
+  isNeeded: boolean;
+  reason: string;
+  modelName?: string;
+  suggestedQuery?: string;
+}
+
+export interface FabricQueryResult {
+  modelName: string;
+  query: string;
+  result: Record<string, unknown>[];
 }
 
 export interface ModelResponse {

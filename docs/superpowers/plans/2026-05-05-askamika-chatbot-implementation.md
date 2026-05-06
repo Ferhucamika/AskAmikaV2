@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Build a production-ready internal chatbot for C-Level executives with intelligent multi-model routing and a Council consensus feature. Fabric data integration is a follow-up milestone — the analyzer's `isBusinessContext` flag is wired in but does not yet branch.
+**Goal:** Build a production-ready internal chatbot for C-Level executives with intelligent multi-model routing and a Council consensus feature. Fabric data integration is a follow-up milestone — the analyzer's `isBusinessContext` flag is preserved for future use.
 
 **Architecture:** Monolithic Next.js 14+ app deployed to Azure App Service. Server Actions handle model routing and MCP calls. React Server Components minimize client JS. Streaming responses for low-latency perception.
 
@@ -700,7 +700,7 @@ export interface LLMClient {
 export interface ModelConfig {
   id: string
   name: string
-  provider: 'anthropic' | 'openai'  // 'google' | 'xai' will be added when those integrations ship
+  provider: 'anthropic' | 'openai'
   capabilities: ('analysis' | 'creative' | 'research' | 'code')[]
   rateLimit: number
 }
@@ -894,7 +894,7 @@ export const MODELS = [
   }
 ]
 
-// Future: add Gemini and Grok entries when API keys are provisioned.
+// Future milestone: Gemini and Grok will be added when API keys are provisioned. The LLMClient interface supports them.
 
 export const AMIKA_COLORS = {
   orange: '#FF6B26',
@@ -1250,24 +1250,29 @@ Create `tests/lib/artifacts/detector.test.ts`:
 import { detectArtifacts } from '@/lib/artifacts/detector'
 
 describe('Artifact Detector', () => {
-  test('should detect code blocks', () => {
-    const text = `Here's the code:\n\`\`\`python\nprint("hello")\n\`\`\``
+  test('detects substantial fenced code blocks', () => {
+    const text = "Here's the code:\n```python\ndef greet(name):\n    print(f\"Hello, {name}\")\n    return True\n```"
     const artifacts = detectArtifacts(text)
     expect(artifacts).toHaveLength(1)
     expect(artifacts[0].type).toBe('code')
     expect(artifacts[0].language).toBe('python')
   })
 
-  test('should detect JSON data', () => {
-    const text = `Here's the data:\n\`\`\`json\n{"name": "John"}\n\`\`\``
+  test('skips trivial one-line code blocks', () => {
+    const text = "Run this:\n```bash\nls\n```"
+    expect(detectArtifacts(text)).toEqual([])
+  })
+
+  test('detects fenced JSON as data even if short', () => {
+    const text = 'Here is the data:\n```json\n{"name": "John"}\n```'
     const artifacts = detectArtifacts(text)
+    expect(artifacts).toHaveLength(1)
     expect(artifacts[0].type).toBe('data')
   })
 
-  test('should detect markdown documents', () => {
-    const text = `# Report\n## Section 1\nContent here`
-    const artifacts = detectArtifacts(text)
-    expect(artifacts.length).toBeGreaterThan(0)
+  test('does NOT extract a multi-heading prose response as a document', () => {
+    const text = '# Report\n## Section 1\nContent here\n## Section 2\nMore content'
+    expect(detectArtifacts(text)).toEqual([])
   })
 })
 ```
@@ -1284,58 +1289,56 @@ Create `src/lib/artifacts/detector.ts`:
 ```typescript
 import { Artifact } from '@/lib/types'
 
-const CODE_BLOCK_REGEX = /```(\w+)?\n([\s\S]*?)\n```/g
-const JSON_REGEX = /\{[\s\S]*\}|\[[\s\S]*\]/
-const TABLE_REGEX = /\|.*\|\n\|[-|]*\|/
+const DATA_LANGUAGES = new Set(['json', 'csv', 'yaml', 'yml', 'toml', 'xml'])
+
+const FENCE_REGEX = /```(\w+)?\n([\s\S]*?)\n```/g
+const TABLE_REGEX = /^(\|.+\|\n\|[-:|\s]+\|(?:\n\|.+\|)+)/m
+
+const MIN_CODE_LINES = 3
+const MIN_CODE_CHARS = 80
+const MIN_TABLE_DATA_ROWS = 2
+
+function isSubstantialBlock(content: string): boolean {
+  const trimmed = content.trim()
+  const lineCount = trimmed.split('\n').length
+  return lineCount >= MIN_CODE_LINES || trimmed.length >= MIN_CODE_CHARS
+}
+
+function tableDataRowCount(table: string): number {
+  // total rows minus 2 (header + separator)
+  return table.trim().split('\n').length - 2
+}
 
 export function detectArtifacts(text: string): Artifact[] {
   const artifacts: Artifact[] = []
-  const seenContent = new Set<string>()
 
-  // Detect code blocks
-  let match
-  const codeRegex = /```(\w+)?\n([\s\S]*?)\n```/g
-  while ((match = codeRegex.exec(text)) !== null) {
-    const [fullMatch, language, content] = match
-    if (!seenContent.has(content)) {
-      artifacts.push({
-        id: `code-${artifacts.length}`,
-        type: 'code',
-        language: language || 'text',
-        content: content.trim(),
-        title: `${language || 'Code'} Block`
-      })
-      seenContent.add(content)
-    }
+  let match: RegExpExecArray | null
+  while ((match = FENCE_REGEX.exec(text)) !== null) {
+    const [, rawLang, content] = match
+    const language = rawLang || 'text'
+    const isData = DATA_LANGUAGES.has(language.toLowerCase())
+
+    // Always extract structured data (JSON/CSV/etc), even if short.
+    // For code, only extract if it's substantial enough to warrant a side panel.
+    if (!isData && !isSubstantialBlock(content)) continue
+
+    artifacts.push({
+      id: `${isData ? 'data' : 'code'}-${artifacts.length}`,
+      type: isData ? 'data' : 'code',
+      language,
+      content: content.trim(),
+      title: isData ? 'Structured Data' : `${language} Block`,
+    })
   }
 
-  // Detect JSON/structured data
-  const jsonRegex = /```json\n([\s\S]*?)\n```/g
-  while ((match = jsonRegex.exec(text)) !== null) {
-    const content = match[1]
-    if (!seenContent.has(content)) {
-      artifacts.push({
-        id: `data-${artifacts.length}`,
-        type: 'data',
-        content: content.trim(),
-        title: 'Structured Data'
-      })
-      seenContent.add(content)
-    }
-  }
-
-  // Detect tables
-  if (TABLE_REGEX.test(text)) {
-    const tableMatch = text.match(/\|[\s\S]*?\n\n/)
-    if (tableMatch && !seenContent.has(tableMatch[0])) {
-      artifacts.push({
-        id: `table-${artifacts.length}`,
-        type: 'data',
-        content: tableMatch[0],
-        title: 'Data Table'
-      })
-      seenContent.add(tableMatch[0])
-    }
+  const tableMatch = text.match(TABLE_REGEX)
+  if (tableMatch && tableDataRowCount(tableMatch[1]) >= MIN_TABLE_DATA_ROWS) {
+    artifacts.push({
+      id: `table-${artifacts.length}`,
+      type: 'data',
+      content: tableMatch[1].trim(),
+      title: 'Data Table',
+    })
   }
 
   return artifacts
@@ -1492,7 +1495,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    // Get 3 models (user-specified or auto-selected)
+    // Get 3+ models (user-specified or auto-selected)
     const selectedModelIds = modelIds || [
       'claude-opus',
       'claude-sonnet',

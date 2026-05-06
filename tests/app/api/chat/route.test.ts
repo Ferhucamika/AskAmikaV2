@@ -1,13 +1,24 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 
-const { mockAnalyze, mockClaudeStream, mockOpenAIStream, ClaudeClientCtor, OpenAIClientCtor } =
-  vi.hoisted(() => ({
-    mockAnalyze: vi.fn(),
-    mockClaudeStream: vi.fn(),
-    mockOpenAIStream: vi.fn(),
-    ClaudeClientCtor: vi.fn(),
-    OpenAIClientCtor: vi.fn(),
-  }));
+const {
+  mockAnalyze,
+  mockClaudeStream,
+  mockOpenAIStream,
+  ClaudeClientCtor,
+  OpenAIClientCtor,
+  mockAnalyzeFabricNeeds,
+  mockGenerateDAX,
+  mockExecuteDAX,
+} = vi.hoisted(() => ({
+  mockAnalyze: vi.fn(),
+  mockClaudeStream: vi.fn(),
+  mockOpenAIStream: vi.fn(),
+  ClaudeClientCtor: vi.fn(),
+  OpenAIClientCtor: vi.fn(),
+  mockAnalyzeFabricNeeds: vi.fn(),
+  mockGenerateDAX: vi.fn(),
+  mockExecuteDAX: vi.fn(),
+}));
 
 vi.mock('@/lib/mcp/analyzer', () => ({
   analyzeQuestion: mockAnalyze,
@@ -25,6 +36,20 @@ vi.mock('@/lib/llm/clients/openai', () => ({
     model,
     stream: mockOpenAIStream,
   })),
+}));
+
+vi.mock('@/lib/fabric/analyzer', () => ({
+  analyzeFabricNeeds: mockAnalyzeFabricNeeds,
+}));
+
+vi.mock('@/lib/fabric/dax-generator', () => ({
+  generateDAXQuery: mockGenerateDAX,
+}));
+
+vi.mock('@/lib/fabric/client', () => ({
+  getFabricClient: () => ({
+    executeDAX: mockExecuteDAX,
+  }),
 }));
 
 import { POST } from '@/app/api/chat/route';

@@ -170,42 +170,11 @@ export default function ChatInterface() {
             'linear-gradient(135deg, var(--amika-orange), var(--amika-pink))',
         }}
       >
-        <div className="flex justify-between items-start mb-4">
-          <div>
-            <h1 className="text-3xl font-bold text-white">AskAmika</h1>
-            <p className="text-white/80">C-Level Decision Support</p>
-          </div>
-          <ModelSelector
-            selectedModelId={selectedModelId}
-            onChange={setSelectedModelId}
-          />
-        </div>
+        <h1 className="text-3xl font-bold text-white">AskAmika</h1>
+        <p className="text-white/80">C-Level Decision Support</p>
       </header>
 
       <main className="flex-1 overflow-y-auto p-6">
-        {lastUserQuestion && (
-          <div className="max-w-4xl mx-auto mb-4 flex justify-end">
-            <button
-              onClick={handleConveneCouncil}
-              className="btn-primary text-sm"
-              disabled={isLoading}
-            >
-              {isLoading ? 'Convening...' : 'Convene Council'}
-            </button>
-            {showCouncil && (
-              <button
-                onClick={() => setShowCouncil(false)}
-                className="ml-2 text-sm px-3 py-1 rounded"
-                style={{
-                  backgroundColor: 'var(--amika-gray-light)',
-                  color: 'var(--amika-gray-text)',
-                }}
-              >
-                Hide Council
-              </button>
-            )}
-          </div>
-        )}
         <div className="space-y-4">
           {messages.map((msg) => (
             <div
@@ -249,7 +218,42 @@ export default function ChatInterface() {
         className="p-6 border-t"
         style={{ borderColor: 'var(--amika-gray-light)' }}
       >
-        <QuestionInput onSubmit={handleQuestionSubmit} isLoading={isLoading} />
+        <div className="max-w-4xl mx-auto">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium" style={{ color: 'var(--amika-gray-text)' }}>
+                Model:
+              </label>
+              <ModelSelector
+                selectedModelId={selectedModelId}
+                onChange={setSelectedModelId}
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleConveneCouncil}
+                className="btn-primary text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={isLoading || !lastUserQuestion}
+                title={!lastUserQuestion ? 'Ask a question first' : 'Convene Council'}
+              >
+                {isLoading ? 'Convening...' : 'Convene Council'}
+              </button>
+              {showCouncil && (
+                <button
+                  onClick={() => setShowCouncil(false)}
+                  className="text-sm px-3 py-1 rounded"
+                  style={{
+                    backgroundColor: 'var(--amika-gray-light)',
+                    color: 'var(--amika-gray-text)',
+                  }}
+                >
+                  Hide Council
+                </button>
+              )}
+            </div>
+          </div>
+          <QuestionInput onSubmit={handleQuestionSubmit} isLoading={isLoading} />
+        </div>
       </footer>
     </div>
   );

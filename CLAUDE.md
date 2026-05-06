@@ -63,3 +63,46 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 ---
 
 **These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.
+
+---
+
+## Project: AskAmika
+
+Internal C-Level decision-support chatbot. Read `docs/BUILD_SUMMARY.md` for the full picture. Key facts for every session:
+
+### Stack
+- Next.js (App Router) + TypeScript 5 + Tailwind CSS v4
+- Auth: Entra ID via MSAL — **not wired live yet**, login gate is in place but `AZURE_AD_CLIENT_ID` is not set
+- Tests: **Vitest 3 + happy-dom** (not Jest, not jsdom — switching either breaks ESM)
+- Run tests: `npm test` (48 tests, all mocked, no live API keys needed)
+
+### Models (6 registered in `src/lib/constants.ts`)
+| ID | Provider | Model string |
+|---|---|---|
+| `claude-opus` | Anthropic | `claude-opus-4-7` |
+| `claude-sonnet` | Anthropic | `claude-sonnet-4-6` |
+| `claude-haiku` | Anthropic | `claude-haiku-4-5-20251001` |
+| `openai-flagship` | OpenAI | `gpt-5.5` |
+| `gemini-flash` | Google | `gemini-2.5-flash` |
+| `grok` | xAI | `grok-3` |
+
+Gemini and Grok need `GOOGLE_API_KEY` / `XAI_API_KEY` in `.env.local` to activate.
+
+### Key architecture
+- **Analyzer** (`src/lib/mcp/analyzer.ts`) classifies every question → `{ isBusinessContext, confidence, entities }`
+- **Router** (`src/lib/llm/router.ts`) picks model: `≥3 entities → Opus`, `business → Sonnet`, `general → Haiku/GPT`
+- **Factory** (`src/lib/llm/factory.ts`) — single place that maps `provider` → client instance; update here when adding new providers
+- **Council** (`/api/council`) — 3 models in parallel via `Promise.all`, synthesized by Opus
+- **Artifacts** — detected by regex after stream closes, auto-opens `ArtifactPanel` overlay
+- **Sessions** — localStorage now; `src/lib/storage/schemas.ts` already matches future Cosmos shape
+
+### What's NOT done yet (requires external provisioning)
+- Azure staging/prod deploy (Task 13) — needs Azure CLI, Key Vault secrets, Container App, GitHub OIDC
+- Live MSAL login — needs App Registration client ID
+- Cosmos DB — schemas ready, just swap `src/lib/storage/sessions.ts`
+- Fabric MCP routing — `isBusinessContext` flag is set but not acted on
+
+### Testing rules
+- All LLM API calls must be mocked with `vi.hoisted` — no live SDK calls in tests
+- Use `vi.mock('openai', ...)` pattern for OpenAI-compatible clients (OpenAI + Grok share the SDK)
+- Gemini mock targets `@google/genai` → `GoogleGenAI` constructor

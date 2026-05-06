@@ -74,7 +74,7 @@ Internal C-Level decision-support chatbot. Read `docs/BUILD_SUMMARY.md` for the 
 - Next.js (App Router) + TypeScript 5 + Tailwind CSS v4
 - Auth: Entra ID via MSAL — **not wired live yet**, login gate is in place but `AZURE_AD_CLIENT_ID` is not set
 - Tests: **Vitest 3 + happy-dom** (not Jest, not jsdom — switching either breaks ESM)
-- Run tests: `npm test` (48 tests, all mocked, no live API keys needed)
+- Run tests: `npm test` (61 tests, all mocked, no live API keys needed)
 
 ### Models (6 active in `src/lib/constants.ts`)
 | ID | Provider | Model string | Status |
@@ -89,9 +89,13 @@ Internal C-Level decision-support chatbot. Read `docs/BUILD_SUMMARY.md` for the 
 All 6 models are active with credentials set up in `.env.local`.
 
 ### Key architecture
-- **Analyzer** (`src/lib/mcp/analyzer.ts`) classifies every question → `{ isBusinessContext, confidence, entities }`
+- **Analyzer** (`src/lib/mcp/analyzer.ts`) classifies every question → `{ isBusinessContext, confidence, entities, semanticModel }`
 - **Router** (`src/lib/llm/router.ts`) picks model: `≥3 entities → Opus`, `business → Sonnet`, `general → Haiku/GPT`
 - **Factory** (`src/lib/llm/factory.ts`) — single place that maps `provider` → client instance; update here when adding new providers
+- **Fabric Integration** (`src/lib/fabric/`) — on business context questions: generates DAX queries, executes against semantic models, enriches LLM response with real data
+  - **Client** (`client.ts`) — OAuth2 service principal auth to Microsoft Fabric API
+  - **DAX Generator** (`dax-generator.ts`) — Opus generates semantic queries from question + entities
+  - **Analyzer** (`analyzer.ts`) — Haiku decides if Fabric data would improve LLM response
 - **Council** (`/api/council`) — 3 models in parallel via `Promise.all`, synthesized by Opus
 - **Artifacts** — detected by regex after stream closes, auto-opens `ArtifactPanel` overlay
 - **Sessions** — localStorage now; `src/lib/storage/schemas.ts` already matches future Cosmos shape
@@ -100,7 +104,6 @@ All 6 models are active with credentials set up in `.env.local`.
 - Azure staging/prod deploy (Task 13) — needs Azure CLI, Key Vault secrets, Container App, GitHub OIDC
 - Live MSAL login — needs App Registration client ID
 - Cosmos DB — schemas ready, just swap `src/lib/storage/sessions.ts`
-- Fabric MCP routing — `isBusinessContext` flag is set but not acted on
 
 ### Testing rules
 - All LLM API calls must be mocked with `vi.hoisted` — no live SDK calls in tests

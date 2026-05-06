@@ -7,7 +7,6 @@ import { createSessionDocument, SessionDocument } from '@/lib/storage/schemas';
 import { saveSession } from '@/lib/storage/sessions';
 import ArtifactPanel from './ArtifactPanel';
 import QuestionInput from './QuestionInput';
-import CouncilView from './CouncilView';
 import ModelSelector from './ModelSelector';
 import CouncilTabs from './CouncilTabs';
 
@@ -17,7 +16,6 @@ export default function ChatInterface() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showCouncil, setShowCouncil] = useState(false);
-  const [councilKey, setCouncilKey] = useState(0);
   const [session, setSession] = useState<SessionDocument | null>(null);
   const [artifacts, setArtifacts] = useState<Artifact[]>([]);
   const [showArtifacts, setShowArtifacts] = useState(false);

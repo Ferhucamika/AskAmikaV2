@@ -31,7 +31,7 @@ Internal C-Level decision-support chatbot. Built with Next.js, TypeScript, Tailw
 | `gemini-2.5-flash` | Google | Fast multimodal option |
 | `grok-3` | xAI | Creative/research alternative |
 
-All six are registered in `MODELS` and selectable as Council members or via `overrideModelId`. Gemini and Grok activate when `GOOGLE_API_KEY` / `XAI_API_KEY` are set in `.env.local`.
+All six are registered in `MODELS` and selectable as Council members or via `overrideModelId`. Gemini and Grok are fully active with `GOOGLE_API_KEY` / `XAI_API_KEY` configured in `.env.local`.
 
 ---
 
@@ -137,8 +137,6 @@ Run `npm run dev` and navigate to `http://localhost:3000`. Thanks to `NEXT_PUBLI
 | Task | Requires |
 |---|---|
 | Task 13 — Azure staging/prod deploy | Azure CLI signed in, Key Vault secrets populated, Container App provisioned, GitHub OIDC federation wired |
-| Live MSAL login (Step 3) | Azure App Registration client ID + tenant ID in `.env.local`, set `NEXT_PUBLIC_SKIP_AUTH=false` |
-| Activate Gemini (Step 1) | Set `GOOGLE_API_KEY` in `.env.local` |
-| Activate Grok (Step 2) | Set `XAI_API_KEY` in `.env.local` |
+| Live MSAL login | Azure App Registration client ID + tenant ID in `.env.local`, set `NEXT_PUBLIC_SKIP_AUTH=false` |
 | Cosmos DB persistence | Azure Cosmos account + key — swap out `src/lib/storage/sessions.ts` (schemas already match) |
 | Fabric MCP routing | Fabric connector — `isBusinessContext` flag already set by analyzer, not yet acted on |

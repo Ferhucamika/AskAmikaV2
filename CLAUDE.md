@@ -76,17 +76,17 @@ Internal C-Level decision-support chatbot. Read `docs/BUILD_SUMMARY.md` for the 
 - Tests: **Vitest 3 + happy-dom** (not Jest, not jsdom — switching either breaks ESM)
 - Run tests: `npm test` (48 tests, all mocked, no live API keys needed)
 
-### Models (6 registered in `src/lib/constants.ts`)
-| ID | Provider | Model string |
-|---|---|---|
-| `claude-opus` | Anthropic | `claude-opus-4-7` |
-| `claude-sonnet` | Anthropic | `claude-sonnet-4-6` |
-| `claude-haiku` | Anthropic | `claude-haiku-4-5-20251001` |
-| `openai-flagship` | OpenAI | `gpt-5.5` |
-| `gemini-flash` | Google | `gemini-2.5-flash` |
-| `grok` | xAI | `grok-3` |
+### Models (6 active in `src/lib/constants.ts`)
+| ID | Provider | Model string | Status |
+|---|---|---|---|
+| `claude-opus` | Anthropic | `claude-opus-4-7` | ✅ Active |
+| `claude-sonnet` | Anthropic | `claude-sonnet-4-6` | ✅ Active |
+| `claude-haiku` | Anthropic | `claude-haiku-4-5-20251001` | ✅ Active |
+| `openai-flagship` | OpenAI | `gpt-5.5` | ✅ Active |
+| `gemini-flash` | Google | `gemini-2.5-flash` | ✅ Active |
+| `grok` | xAI | `grok-3` | ✅ Active |
 
-Gemini and Grok need `GOOGLE_API_KEY` / `XAI_API_KEY` in `.env.local` to activate.
+All 6 models are active with credentials set up in `.env.local`.
 
 ### Key architecture
 - **Analyzer** (`src/lib/mcp/analyzer.ts`) classifies every question → `{ isBusinessContext, confidence, entities }`

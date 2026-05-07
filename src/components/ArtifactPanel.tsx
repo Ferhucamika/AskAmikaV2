@@ -1,6 +1,8 @@
 'use client';
 
+import { useState } from 'react';
 import { Artifact } from '@/lib/types';
+import ChartView from './ChartView';
 
 interface ArtifactPanelProps {
   artifacts: Artifact[];
@@ -142,9 +144,15 @@ function DataTableView({ table, title }: { table: ParsedTable; title: string }) 
   const csv = toCSV(table.headers, table.rows);
   const safeTitle = title.replace(/[^a-z0-9]+/gi, '_').toLowerCase() || 'export';
   const filename = `${safeTitle}.csv`;
+  const [showChart, setShowChart] = useState(false);
 
   return (
     <>
+      {showChart && (
+        <div className="mb-3">
+          <ChartView headers={table.headers} rows={table.rows} />
+        </div>
+      )}
       <div className="overflow-x-auto rounded border" style={{ borderColor: 'var(--amika-gray-light)' }}>
         <table className="min-w-full text-sm">
           <thead style={{ backgroundColor: 'var(--amika-gray-light)' }}>
@@ -179,7 +187,18 @@ function DataTableView({ table, title }: { table: ParsedTable; title: string }) 
           </tbody>
         </table>
       </div>
-      <div className="mt-3 flex gap-2">
+      <div className="mt-3 flex gap-2 flex-wrap">
+        <button
+          onClick={() => setShowChart((v) => !v)}
+          className="text-sm px-3 py-1 rounded border"
+          style={{
+            borderColor: 'var(--amika-orange)',
+            color: showChart ? 'white' : 'var(--amika-orange)',
+            backgroundColor: showChart ? 'var(--amika-orange)' : 'transparent',
+          }}
+        >
+          {showChart ? 'Hide chart' : 'Visualize'}
+        </button>
         <button
           onClick={() => void navigator.clipboard.writeText(csv)}
           className="text-sm px-3 py-1 rounded text-white"

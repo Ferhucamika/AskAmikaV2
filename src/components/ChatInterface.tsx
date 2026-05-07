@@ -92,6 +92,17 @@ export default function ChatInterface() {
     }
   };
 
+  const handleClearChat = () => {
+    if (messages.length === 0 && !councilResults && artifacts.length === 0) return;
+    if (!confirm('Clear the current conversation? This cannot be undone.')) return;
+    setMessages([]);
+    setArtifacts([]);
+    setShowArtifacts(false);
+    setCouncilResults(null);
+    setShowCouncil(false);
+    setSession(createSessionDocument(PILOT_USER_ID));
+  };
+
   const handleQuestionSubmit = async (question: string) => {
     setIsLoading(true);
     setArtifacts([]);
@@ -266,6 +277,21 @@ export default function ChatInterface() {
                 disabled={councilLoading}
               >
                 {councilLoading ? 'Convening...' : 'Convene Council'}
+              </button>
+              <button
+                onClick={handleClearChat}
+                className="text-sm px-3 py-1 rounded"
+                disabled={isLoading || councilLoading || (messages.length === 0 && !councilResults)}
+                style={{
+                  backgroundColor: 'var(--amika-gray-light)',
+                  color: 'var(--amika-gray-text)',
+                  opacity:
+                    isLoading || councilLoading || (messages.length === 0 && !councilResults)
+                      ? 0.5
+                      : 1,
+                }}
+              >
+                Clear Chat
               </button>
               {showCouncil && (
                 <button

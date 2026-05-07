@@ -9,6 +9,7 @@ const {
   mockAnalyzeFabricNeeds,
   mockGenerateDAX,
   mockExecuteDAX,
+  mockMatchCatalog,
 } = vi.hoisted(() => ({
   mockAnalyze: vi.fn(),
   mockClaudeStream: vi.fn(),
@@ -18,6 +19,7 @@ const {
   mockAnalyzeFabricNeeds: vi.fn(),
   mockGenerateDAX: vi.fn(),
   mockExecuteDAX: vi.fn(),
+  mockMatchCatalog: vi.fn(),
 }));
 
 vi.mock('@/lib/mcp/analyzer', () => ({
@@ -46,6 +48,10 @@ vi.mock('@/lib/fabric/dax-generator', () => ({
   generateDAXQuery: mockGenerateDAX,
 }));
 
+vi.mock('@/lib/fabric/catalog-matcher', () => ({
+  matchQueryCatalog: mockMatchCatalog,
+}));
+
 vi.mock('@/lib/fabric/client', () => ({
   getFabricClient: () => ({
     executeDAX: mockExecuteDAX,
@@ -60,6 +66,10 @@ beforeEach(() => {
   mockOpenAIStream.mockReset();
   ClaudeClientCtor.mockClear();
   OpenAIClientCtor.mockClear();
+  mockAnalyzeFabricNeeds.mockReset();
+  mockGenerateDAX.mockReset();
+  mockExecuteDAX.mockReset();
+  mockMatchCatalog.mockReset();
 });
 
 async function* yieldChunks(chunks: string[]) {
@@ -128,5 +138,50 @@ describe('POST /api/chat', () => {
     );
 
     expect(response.status).toBe(500);
+  });
+
+  test('invokes catalog matcher and Fabric flow when business context + needs data', async () => {
+    mockAnalyze.mockResolvedValue({
+      isBusinessContext: true,
+      confidence: 0.95,
+      entities: ['Sephora', 'products', 'growth'],
+      semanticModel: 'sales_analytics',
+    });
+    mockClaudeStream
+      .mockReturnValueOnce(yieldChunks(['initial ', 'response']))
+      .mockReturnValueOnce(yieldChunks(['enhanced ', 'with data']));
+    mockAnalyzeFabricNeeds.mockResolvedValue({
+      isNeeded: true,
+      reason: 'Lacks real data',
+    });
+    mockMatchCatalog.mockResolvedValue({
+      matched: true,
+      queryKey: 'sephora_top_products_growth_units_ly',
+      confidence: 0.92,
+    });
+    mockGenerateDAX.mockResolvedValue('EVALUATE TOPN(...)');
+    mockExecuteDAX.mockResolvedValue({
+      modelName: 'sales_analytics',
+      query: 'EVALUATE TOPN(...)',
+      result: [{ product: 'X', units: 100 }],
+    });
+
+    const response = await POST(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      postRequest({ question: 'Top Sephora products growth' }) as any
+    );
+
+    expect(response.status).toBe(200);
+    expect(mockMatchCatalog).toHaveBeenCalledWith(
+      'Top Sephora products growth',
+      ['Sephora', 'products', 'growth']
+    );
+    expect(mockGenerateDAX).toHaveBeenCalledWith(
+      'Top Sephora products growth',
+      ['Sephora', 'products', 'growth'],
+      'sales_analytics',
+      expect.objectContaining({ matched: true, queryKey: 'sephora_top_products_growth_units_ly' })
+    );
+    expect(await response.text()).toBe('enhanced with data');
   });
 });

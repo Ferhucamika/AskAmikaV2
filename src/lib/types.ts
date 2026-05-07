@@ -35,6 +35,19 @@ export interface FabricQueryResult {
   result: Record<string, unknown>[];
 }
 
+export interface QueryCatalogEntry {
+  queryKey: string;
+  description: string;
+  daxTemplate?: string;
+}
+
+export interface CatalogMatchResult {
+  matched: boolean;
+  queryKey?: string;
+  daxTemplate?: string;
+  confidence: number;
+}
+
 export interface ModelResponse {
   model: string;
   content: string;

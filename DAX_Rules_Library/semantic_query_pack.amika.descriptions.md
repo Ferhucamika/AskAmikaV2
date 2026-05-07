@@ -1,0 +1,128 @@
+# DAX Case Descriptions
+
+This file documents each query key in `semantic_query_pack.amika.json`.
+
+- `sephora_category_decline_month_vs_ytd_sales_ly`: Sephora case that compares category-level performance in sales for current month versus YTD.
+- `sephora_category_decline_month_vs_ytd_units_ly`: Sephora case that compares category-level performance in units for current month versus YTD.
+- `sephora_category_growth_month_vs_ytd_sales_ly`: Sephora case that compares category-level performance in sales for current month versus YTD.
+- `sephora_category_growth_month_vs_ytd_units_ly`: Sephora case that compares category-level performance in units for current month versus YTD.
+- `sephora_doors_need_acceleration_ca_regions`: Sephora case that returns CA-region doors pacing at least 3% below goal for the current period with `Store Number / Name`, `Field`, and a short pace summary.
+- `sephora_doors_pacing_above_goal_benchmark`: Sephora case that returns doors pacing above goal for the current period with `Store Number / Name`, `Field`, and a short pace summary.
+- `sephora_top_locations_paced_goal`: Sephora case that ranks all doors by pace-to-goal percentage for the current period and returns `Store Number / Name`, `Field`, and a short pace summary. Use this when the user asks for top or best-performing locations by paced goal without specifying above/below a threshold. When the user specifies a year or quarter, generate custom DAX using the year/quarter extracted from the question instead of using this key.
+- `sephora_top_regions_paced_goal`: Sephora case that aggregates store-level goal pacing data up to the Region level and ranks all regions by pace-to-goal percentage for the current period. Use when the user asks about top/bottom regions by pace or goal performance.
+- `sephora_doors_risk_missing_q1`: Sephora case that flags doors at risk of missing Q1 when pace-to-goal is at least 3% below target and returns `Store Number / Name`, `Field`, and a short pace summary.
+- `sephora_growth_pct_ca_regions`: Sephora case that summarizes growth percentage in CA/PNW region groups in performance for the current period.
+- `sephora_kpi_sales_ly`: Sephora case that returns a KPI summary in sales versus last year.
+- `sephora_kpi_units_ly`: Sephora case that returns a KPI summary in units versus last year.
+- `sephora_largest_variance_ly_doors`: Sephora case that shows doors with largest variance vs LY in performance versus last year.
+- `sephora_mix_month_vs_ytd_sales`: Sephora case that calculates retailer mix in performance for current month versus YTD.
+- `sephora_mix_month_vs_ytd_units`: Sephora case that calculates retailer mix in performance for current month versus YTD.
+- `sephora_territory_doors_trending_below_goal`: Sephora case that returns top territory doors pacing at least 3% below goal target for the current period with `Store Number / Name`, `Field`, and a short pace summary.
+- `sephora_territory_doors_under_3pct_growth_ly`: Sephora case that analyzes territory door performance in performance versus last year. This is the broad all-territory version; when the question specifies a named territory like West or East, runtime should generate a territory-filtered DAX instead of using this key unfiltered.
+- `sephora_top_locations_decline_sales_ly`: Sephora case that ranks location performance in sales versus last year.
+- `sephora_top_locations_decline_units_ly`: Sephora case that ranks location performance in units versus last year.
+- `sephora_top_locations_growth_sales_ly`: Sephora case that ranks location performance in sales versus last year.
+- `sephora_top_locations_last_3m_sales`: Sephora case that ranks locations by total sales over the last 3 months.
+- `sephora_top_locations_growth_units_ly`: Sephora case that ranks location performance in units versus last year.
+- `sephora_top_locations_last_3m_units`: Sephora case that ranks locations by total units over the last 3 months.
+- `sephora_top_products_decline_sales_ly`: Legacy key. Sephora item-level is units-only; use `sephora_top_products_decline_units_ly`.
+- `sephora_top_products_decline_units_ly`: Sephora case that ranks product performance in units versus last year.
+- `sephora_top_products_growth_sales_ly`: Legacy key. Sephora item-level is units-only; use `sephora_top_products_growth_units_ly`.
+- `sephora_top_products_last_3m_sales`: Legacy key. Sephora item-level is units-only; use `sephora_top_products_last_3m_units`.
+- `sephora_top_products_growth_units_ly`: Sephora case that ranks product performance in units versus last year.
+- `sephora_top_products_last_2m_units`: Sephora case that ranks products by total units over the last 2 months.
+- `sephora_top_products_last_3m_units`: Sephora case that ranks products by total units over the last 3 months.
+- `sephora_top_products_trend_13w_sales`: Legacy key. Sephora item-level is units-only; use `sephora_top_products_trend_13w_units`.
+- `sephora_top_products_trend_13w_units`: Sephora case that shows total units by week for the top 5 products over the latest 13 weeks. This is the stored match for prompts like "show me the weekly trend for top Sephora products over the last 13 weeks by units".
+- `sephora_top_products_trend_8w_sales`: Legacy key. Sephora item-level is units-only; use `sephora_top_products_trend_13w_units`.
+- `sephora_bm_top_products_growth_sales_ly`: Legacy key. Sephora B&M item-level is units-only; use `sephora_bm_top_products_growth_units_ly`.
+- `sephora_bm_top_products_last_3m_sales`: Legacy key. Sephora B&M item-level is units-only; use `sephora_bm_top_products_last_3m_units`.
+- `sephora_bm_top_products_decline_sales_ly`: Legacy key. Sephora B&M item-level is units-only; use `sephora_bm_top_products_decline_units_ly`.
+- `sephora_bm_top_products_growth_units_ly`: Sephora B&M item-level case that ranks product performance in units versus last year.
+- `sephora_bm_top_products_last_2m_units`: Sephora B&M item-level case that ranks products by total units over the last 2 months.
+- `sephora_bm_top_products_last_3m_units`: Sephora B&M item-level case that ranks products by total units over the last 3 months.
+- `sephora_bm_top_products_decline_units_ly`: Sephora B&M item-level case that ranks product performance in units versus last year.
+- `sephora_bm_top_products_trend_8w_sales`: Legacy key. Sephora B&M item-level is units-only; use `sephora_bm_top_products_trend_13w_units`.
+- `sephora_bm_top_products_trend_8w_units`: Sephora B&M item-level case that shows total units by week for the top 5 products over the latest 8 weeks.
+- `sephora_bm_top_products_trend_13w_sales`: Legacy key. Sephora B&M item-level is units-only; use `sephora_bm_top_products_trend_13w_units`.
+- `sephora_bm_top_products_trend_13w_units`: Sephora B&M item-level case that shows total units by week for the top 5 products over the latest 13 weeks.
+- `sephora_top_locations_last_2m_sales`: Sephora case that ranks locations by total sales over the last 2 months.
+- `sephora_top_locations_last_2m_units`: Sephora case that ranks locations by total units over the last 2 months.
+- `sephora_top_locations_ytd_sales`: Sephora case that ranks locations by total sales year-to-date.
+- `sephora_top_locations_ytd_units`: Sephora case that ranks locations by total units year-to-date.
+- `sephora_top_regions_growth_sales_ly`: Sephora case that aggregates store-level sales up to the Field (region) level and ranks regions by growth delta versus last year.
+- `sephora_top_regions_growth_units_ly`: Sephora case that aggregates store-level units up to the Field (region) level and ranks regions by growth delta versus last year.
+- `sephora_top_regions_last_3m_sales`: Sephora case that aggregates store-level sales up to the Field (region) level and ranks regions by total sales over the last 3 months.
+- `sephora_top_regions_last_3m_units`: Sephora case that aggregates store-level units up to the Field (region) level and ranks regions by total units over the last 3 months.
+- `sephora_top_states_sales_ly`: Sephora case that aggregates store-level sales up to the state level and ranks states by growth delta versus last year.
+- `sephora_top_states_units_ly`: Sephora case that aggregates store-level units up to the state level and ranks states by growth delta versus last year.
+- `sephora_trend_month_vs_ytd_sales_ly`: Sephora case that shows trend change in sales for current month versus YTD.
+- `sephora_trend_month_vs_ytd_units_ly`: Sephora case that shows trend change in units for current month versus YTD.
+- `sephora_total_sales_week_vs_ly`: Sephora case that returns last completed week total sales versus the same week last year as a single summary row with SalesLastWeek, SalesSameWeekLY, DeltaVsLY, and PctVsLY. Use when the question asks for total Sephora sales growth for last week versus last year with no product, store, or category scope.
+- `sephora_territories_below_field_avg_growth_latest_month`: Sephora case that identifies territories (Fields) whose sales growth versus last year in the latest completed month is below the overall average field growth rate. Returns Field, TerritorySales, TerritorySalesLY, GrowthPctVsLY, and DeltaVsFieldAverage ordered from worst to best.
+- `sephora_field_pace_summary_current_quarter`: Sephora case that returns a field-level pace-to-goal summary for the current quarter with three segments: one All Fields Average header row, the top 3 fields by PaceToGoalPct, and the bottom 3 (excluding overlap with top 3). Columns: Segment, Field, FieldActual, FieldGoal, PaceToGoalPct, OverallFieldAveragePace, DeltaVsFieldAverage, BelowPacedGoal. Use when the user asks how each Sephora field or territory is pacing to goal for the current quarter.
+- `ulta_category_decline_month_vs_ytd_sales_ly`: Ulta case that compares category-level performance in sales for current month versus YTD.
+- `ulta_category_decline_month_vs_ytd_units_ly`: Ulta case that compares category-level performance in units for current month versus YTD.
+- `ulta_category_growth_month_vs_ytd_sales_ly`: Ulta case that compares category-level performance in sales for current month versus YTD.
+- `ulta_category_growth_month_vs_ytd_units_ly`: Ulta case that compares category-level performance in units for current month versus YTD.
+- `ulta_kpi_sales_ly`: Ulta case that returns a KPI summary in sales versus last year.
+- `ulta_kpi_units_ly`: Ulta case that returns a KPI summary in units versus last year.
+- `ulta_mix_month_vs_ytd_sales`: Ulta case that calculates retailer mix in performance for current month versus YTD.
+- `ulta_mix_month_vs_ytd_units`: Ulta case that calculates retailer mix in performance for current month versus YTD.
+- `ulta_top_locations_decline_sales_ly`: Ulta case that ranks store sales decline versus last year using `NET_SALES_RETAIL` and store attributes from `sps_location_ulta`.
+- `ulta_top_locations_decline_units_ly`: Ulta case that ranks store unit decline versus last year using `NET_SALES_UNITS` and store attributes from `sps_location_ulta`.
+- `ulta_top_locations_growth_sales_ly`: Ulta case that ranks store sales versus last year using `NET_SALES_RETAIL` and store attributes from `sps_location_ulta`.
+- `ulta_top_locations_last_3m_sales`: Ulta case that ranks stores by total sales over the last 3 months using `NET_SALES_RETAIL` and store attributes from `sps_location_ulta`.
+- `ulta_top_locations_growth_units_ly`: Ulta case that ranks store units versus last year using `NET_SALES_UNITS` and store attributes from `sps_location_ulta`.
+- `ulta_top_locations_last_2m_sales`: Ulta case that ranks stores by total sales over the last 2 months using `NET_SALES_RETAIL` and store attributes from `sps_location_ulta`.
+- `ulta_top_locations_last_2m_units`: Ulta case that ranks stores by total units over the last 2 months using `NET_SALES_UNITS` and store attributes from `sps_location_ulta`.
+- `ulta_top_locations_last_3m_units`: Ulta case that ranks stores by total units over the last 3 months using `NET_SALES_UNITS` and store attributes from `sps_location_ulta`.
+- `ulta_top_locations_ytd_sales`: Ulta case that ranks stores by total sales year-to-date using `NET_SALES_RETAIL` and store attributes from `sps_location_ulta`.
+- `ulta_top_locations_ytd_units`: Ulta case that ranks stores by total units year-to-date using `NET_SALES_UNITS` and store attributes from `sps_location_ulta`.
+- `ulta_top_products_decline_sales_ly`: Ulta case that ranks product performance in sales versus last year.
+- `ulta_top_products_decline_units_ly`: Ulta case that ranks product performance in units versus last year.
+- `ulta_top_products_growth_sales_ly`: Ulta case that ranks product performance in sales versus last year.
+- `ulta_top_products_last_3m_sales`: Ulta case that ranks products by total sales over the last 3 months.
+- `ulta_top_products_growth_units_ly`: Ulta case that ranks product performance in units versus last year.
+- `ulta_top_products_last_2m_sales`: Ulta case that ranks products by total sales over the last 2 months.
+- `ulta_top_products_last_2m_units`: Ulta case that ranks products by total units over the last 2 months.
+- `ulta_top_products_last_3m_units`: Ulta case that ranks products by total units over the last 3 months.
+- `ulta_top_products_trend_13w_sales`: Ulta case that shows total sales by week for the top 5 products over the latest 13 weeks.
+- `ulta_top_products_trend_13w_units`: Ulta case that shows total units by week for the top 5 products over the latest 13 weeks. This is the stored match for prompts like "show me the weekly trend for top Ulta products over the last 13 weeks by units".
+- `ulta_top_products_trend_8w_sales`: Ulta case that shows total sales by week for the top 5 products over the latest 8 weeks.
+- `ulta_top_products_trend_8w_units`: Ulta case that shows total units by week for the top 5 products over the latest 8 weeks.
+- `ulta_portal_top_products_decline_sales_ly`: Ulta Portal case that ranks product performance in sales versus last year.
+- `ulta_portal_top_products_decline_units_ly`: Ulta Portal case that ranks product performance in units versus last year.
+- `ulta_portal_top_products_growth_sales_ly`: Ulta Portal case that ranks product performance in sales versus last year.
+- `ulta_portal_top_products_growth_units_ly`: Ulta Portal case that ranks product performance in units versus last year.
+- `ulta_portal_top_products_last_3m_sales`: Ulta Portal case that ranks products by total sales over the last 3 months.
+- `ulta_portal_top_products_last_3m_units`: Ulta Portal case that ranks products by total units over the last 3 months.
+- `ulta_portal_top_products_trend_13w_sales`: Ulta Portal case that shows total sales by week for the top 5 products over the latest 13 weeks.
+- `ulta_portal_top_products_trend_13w_units`: Ulta Portal case that shows total units by week for the top 5 products over the latest 13 weeks.
+- `ulta_portal_top_products_trend_8w_sales`: Ulta Portal case that shows total sales by week for the top 5 products over the latest 8 weeks.
+- `ulta_portal_top_products_trend_8w_units`: Ulta Portal case that shows total units by week for the top 5 products over the latest 8 weeks.
+- `ulta_top_states_sales_ly`: Ulta case that aggregates Ulta store sales up to the state level from `sps_location_ulta` and ranks states by growth delta versus last year.
+- `ulta_top_states_units_ly`: Ulta case that aggregates Ulta store units up to the state level from `sps_location_ulta` and ranks states by growth delta versus last year.
+- `ulta_trend_month_vs_ytd_sales_ly`: Ulta case that shows trend change in sales for current month versus YTD.
+- `ulta_trend_month_vs_ytd_units_ly`: Ulta case that shows trend change in units for current month versus YTD.
+
+## Inventory and out-of-stock (OOS) cases
+
+Inventory data lives in `sps_activity[INVENTORY_UNITS]`, `INVENTORY_COST`, and `INVENTORY_RETAIL`. Only retailer keys `"ULTA"`, `"Sephora"`, and `"SEPHORA CANADA"` populate inventory; `"UltaPortalLocation"` and `"SephoraLocationBuyerReport"` do not. OOS means `INVENTORY_UNITS = 0` for a store-item-period.
+
+- `ulta_inventory_store_weekly`: Ulta inventory case that returns weekly inventory units, net sales retail, and distinct item count per store for the current year. Use when the user asks for Ulta inventory levels by store over weekly periods.
+- `sephora_inventory_store_monthly`: Sephora inventory case that returns monthly sum and average inventory units plus net sales retail per store for the current year. Use for Sephora inventory levels by store at monthly grain.
+- `ulta_oos_rate_by_store`: Ulta inventory case that ranks stores by count of zero-inventory records within the current year, filtered to retail-like doors (TotalRecords > 1000 and AvgInvUnits < 100) and excluding known DC/e-commerce store numbers including 0902. Use when the user asks which Ulta stores have the most out-of-stock issues.
+- `sephora_oos_rate_by_store`: Sephora inventory case that ranks stores by count of zero-inventory records within the current year, filtered to retail-like doors. Use when the user asks which Sephora stores have the most OOS issues.
+- `ulta_oos_by_product`: Ulta inventory case that ranks products by total zero-inventory records across all Ulta stores, keyed by `SPS_ITEM_MAPPING_KEY`. Use when the user asks which Ulta products are most frequently out of stock.
+- `ulta_oos_by_product_named`: Ulta inventory case that ranks products by zero-inventory records with readable SKU names joined from `shpt_master_sku_list_sku_mapping` (consolidated_sku_name, collection, franchise). Use when the user wants Ulta OOS products with product names.
+- `ulta_oos_trend_weekly`: Ulta inventory case that shows week-over-week OOS counts, total inventory units, and net sales retail aggregated across all Ulta stores for the current year. Use when the user asks for Ulta OOS trend by week.
+- `sephora_oos_trend_monthly`: Sephora inventory case that shows month-over-month OOS counts, total and average inventory units aggregated across all Sephora stores for the current year. Use when the user asks for Sephora OOS trend by month.
+- `ulta_inventory_snapshot_latest_by_store`: Ulta inventory case that returns the most recent inventory snapshot per store (inventory units, inventory retail, distinct item count, zero-inventory item count) at the latest `Period Ending Date`. Use when the user asks for current/latest Ulta inventory by store.
+- `sephora_inventory_snapshot_latest_by_store`: Sephora inventory case that returns the most recent inventory snapshot per store at the latest `Period Ending Date`. Use when the user asks for current/latest Sephora inventory by store.
+- `cross_retailer_inventory_summary`: Inventory case that summarizes total records, non-zero inventory records, sum and average inventory units, net sales retail, and distinct stores/items per retailer key (ULTA, Sephora, SEPHORA CANADA) for the current year. Use when the user wants a side-by-side inventory health comparison across retailers.
+- `ulta_dc_warehouse_detection`: Ulta inventory diagnostic case that identifies Ulta store keys that behave like distribution centers (AvgInvUnits > 100). Use when the user wants to detect or exclude DC/warehouse rows from Ulta inventory analysis.
+- `ulta_oos_by_franchise_monthly`: Ulta inventory case that ranks franchises by zero-inventory records by month, with distinct store count, for the current year. Use when the user asks which Ulta product franchises have the worst OOS per month.
+- `sephora_oos_by_franchise_weekly`: Sephora inventory case that ranks franchises by zero-inventory records by week for the current year. Use when the user asks which Sephora product franchises have the worst OOS per week.
+- `ulta_weeks_of_supply_by_store`: Ulta inventory case that calculates approximate weeks of supply per store using average weekly inventory units divided by average weekly net sales units. Use when the user asks about Ulta stores being overstocked, understocked, or weeks of supply.
+- `retailer_feed_inventory_diagnostic`: Inventory diagnostic case that returns per-retailer-key totals for records, non-zero inventory/sales/on-order counts, and aggregate inventory/sales. Use when the user is investigating which retailer feeds actually populate inventory or sales metrics.

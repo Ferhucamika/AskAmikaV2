@@ -1,0 +1,142 @@
+{
+  "instructions": {
+    "purpose": "Map business questions to curated semantic queries for /api/ask",
+    "how_to_use": [
+      "Replace placeholder table/column names with your real model names.",
+      "Keep queryKey values stable; route questions to these keys.",
+      "Move finalized DAX into SEMANTIC_QUERY_PACK_JSON and keys into SEMANTIC_DEFAULT_QUERY_KEYS or intent routing."
+    ],
+    "placeholders": {
+      "<FACT_SALES>": "Main sales fact table",
+      "<DATE_TABLE>": "Date dimension",
+      "<PRODUCT_TABLE>": "Product dimension",
+      "<CUSTOMER_TABLE>": "Customer/retailer dimension",
+      "<REGION_TABLE>": "Geography/market dimension",
+      "<MEASURE_NET_SALES>": "Net sales measure, e.g. [NET_SALES_RETAIL]",
+      "<MEASURE_UNITS>": "Units measure",
+      "<MEASURE_MARGIN_PCT>": "Margin % measure"
+    }
+  },
+  "library": [
+    {
+      "id": 1,
+      "question": "What are the top 5 revenue drivers right now?",
+      "queryKey": "top_revenue_drivers_current",
+      "daxTemplate": "EVALUATE TOPN(5, SUMMARIZECOLUMNS(<PRODUCT_TABLE>[Product], \"NetSales\", <MEASURE_NET_SALES>), [NetSales], DESC)"
+    },
+    {
+      "id": 2,
+      "question": "Summarize KPI health in 3 lines.",
+      "queryKey": "kpi_health_summary",
+      "daxTemplate": "EVALUATE ROW(\"NetSales\", <MEASURE_NET_SALES>, \"Units\", <MEASURE_UNITS>, \"MarginPct\", <MEASURE_MARGIN_PCT>)"
+    },
+    {
+      "id": 3,
+      "question": "Which regions are underperforming vs average?",
+      "queryKey": "region_vs_avg",
+      "daxTemplate": "EVALUATE ADDCOLUMNS(SUMMARIZECOLUMNS(<REGION_TABLE>[Region], \"NetSales\", <MEASURE_NET_SALES>), \"DeltaVsAvg\", [NetSales] - AVERAGEX(ALL(<REGION_TABLE>[Region]), CALCULATE(<MEASURE_NET_SALES>)))"
+    },
+    {
+      "id": 4,
+      "question": "What changed most in the last 30 days?",
+      "queryKey": "change_last_30_days",
+      "daxTemplate": "EVALUATE TOPN(10, ADDCOLUMNS(SUMMARIZECOLUMNS(<PRODUCT_TABLE>[Product]), \"Sales_30d\", CALCULATE(<MEASURE_NET_SALES>, DATESINPERIOD(<DATE_TABLE>[Date], MAX(<DATE_TABLE>[Date]), -30, DAY)), \"Sales_prev30d\", CALCULATE(<MEASURE_NET_SALES>, DATESINPERIOD(<DATE_TABLE>[Date], MAX(<DATE_TABLE>[Date]) - 30, -30, DAY)), \"Delta\", [Sales_30d] - [Sales_prev30d]), ABS([Delta]), DESC)"
+    },
+    {
+      "id": 5,
+      "question": "What are the biggest anomalies/outliers?",
+      "queryKey": "outliers_by_product",
+      "daxTemplate": "EVALUATE TOPN(10, ADDCOLUMNS(SUMMARIZECOLUMNS(<PRODUCT_TABLE>[Product], \"NetSales\", <MEASURE_NET_SALES>), \"ZScoreApprox\", DIVIDE([NetSales] - AVERAGEX(ALL(<PRODUCT_TABLE>[Product]), CALCULATE(<MEASURE_NET_SALES>)), STDEVX.P(ALL(<PRODUCT_TABLE>[Product]), CALCULATE(<MEASURE_NET_SALES>)))), ABS([ZScoreApprox]), DESC)"
+    },
+    {
+      "id": 6,
+      "question": "What are top products by net sales this month?",
+      "queryKey": "top_products_mtd",
+      "daxTemplate": "EVALUATE TOPN(10, SUMMARIZECOLUMNS(<PRODUCT_TABLE>[Product], DATESMTD(<DATE_TABLE>[Date]), \"NetSales\", <MEASURE_NET_SALES>), [NetSales], DESC)"
+    },
+    {
+      "id": 7,
+      "question": "Which products are declining month over month?",
+      "queryKey": "declining_products_mom",
+      "daxTemplate": "EVALUATE TOPN(15, ADDCOLUMNS(SUMMARIZECOLUMNS(<PRODUCT_TABLE>[Product]), \"Sales_CM\", CALCULATE(<MEASURE_NET_SALES>, DATESMTD(<DATE_TABLE>[Date])), \"Sales_PM\", CALCULATE(<MEASURE_NET_SALES>, DATEADD(DATESMTD(<DATE_TABLE>[Date]), -1, MONTH)), \"MoM\", [Sales_CM] - [Sales_PM]), [MoM], ASC)"
+    },
+    {
+      "id": 8,
+      "question": "Which channels/customers contribute most revenue?",
+      "queryKey": "top_customers_revenue",
+      "daxTemplate": "EVALUATE TOPN(10, SUMMARIZECOLUMNS(<CUSTOMER_TABLE>[Customer], \"NetSales\", <MEASURE_NET_SALES>), [NetSales], DESC)"
+    },
+    {
+      "id": 9,
+      "question": "What is contribution by product family?",
+      "queryKey": "product_family_mix",
+      "daxTemplate": "EVALUATE ADDCOLUMNS(SUMMARIZECOLUMNS(<PRODUCT_TABLE>[Family], \"NetSales\", <MEASURE_NET_SALES>), \"ContributionPct\", DIVIDE([NetSales], CALCULATE(<MEASURE_NET_SALES>, ALL(<PRODUCT_TABLE>[Family]))))"
+    },
+    {
+      "id": 10,
+      "question": "What is YTD vs last year YTD?",
+      "queryKey": "ytd_vs_lytd",
+      "daxTemplate": "EVALUATE ROW(\"YTD\", CALCULATE(<MEASURE_NET_SALES>, DATESYTD(<DATE_TABLE>[Date])), \"LYTD\", CALCULATE(<MEASURE_NET_SALES>, SAMEPERIODLASTYEAR(DATESYTD(<DATE_TABLE>[Date]))), \"Delta\", CALCULATE(<MEASURE_NET_SALES>, DATESYTD(<DATE_TABLE>[Date])) - CALCULATE(<MEASURE_NET_SALES>, SAMEPERIODLASTYEAR(DATESYTD(<DATE_TABLE>[Date]))))"
+    },
+    {
+      "id": 11,
+      "question": "Which region has best margin?",
+      "queryKey": "best_margin_region",
+      "daxTemplate": "EVALUATE TOPN(5, SUMMARIZECOLUMNS(<REGION_TABLE>[Region], \"MarginPct\", <MEASURE_MARGIN_PCT>), [MarginPct], DESC)"
+    },
+    {
+      "id": 12,
+      "question": "Which region has worst margin?",
+      "queryKey": "worst_margin_region",
+      "daxTemplate": "EVALUATE TOPN(5, SUMMARIZECOLUMNS(<REGION_TABLE>[Region], \"MarginPct\", <MEASURE_MARGIN_PCT>), [MarginPct], ASC)"
+    },
+    {
+      "id": 13,
+      "question": "What are low-volume high-revenue SKUs?",
+      "queryKey": "high_revenue_low_units",
+      "daxTemplate": "EVALUATE TOPN(20, ADDCOLUMNS(SUMMARIZECOLUMNS(<PRODUCT_TABLE>[Product], \"NetSales\", <MEASURE_NET_SALES>, \"Units\", <MEASURE_UNITS>), \"RevenuePerUnit\", DIVIDE([NetSales], [Units])), [RevenuePerUnit], DESC)"
+    },
+    {
+      "id": 14,
+      "question": "Which products have high units but low revenue?",
+      "queryKey": "high_units_low_revenue",
+      "daxTemplate": "EVALUATE TOPN(20, ADDCOLUMNS(SUMMARIZECOLUMNS(<PRODUCT_TABLE>[Product], \"NetSales\", <MEASURE_NET_SALES>, \"Units\", <MEASURE_UNITS>), \"RevenuePerUnit\", DIVIDE([NetSales], [Units])), [RevenuePerUnit], ASC)"
+    },
+    {
+      "id": 15,
+      "question": "Which customer is growing fastest quarter over quarter?",
+      "queryKey": "customer_qoq_growth",
+      "daxTemplate": "EVALUATE TOPN(10, ADDCOLUMNS(SUMMARIZECOLUMNS(<CUSTOMER_TABLE>[Customer]), \"Sales_CQ\", CALCULATE(<MEASURE_NET_SALES>, DATESQTD(<DATE_TABLE>[Date])), \"Sales_PQ\", CALCULATE(<MEASURE_NET_SALES>, DATEADD(DATESQTD(<DATE_TABLE>[Date]), -1, QUARTER)), \"QoQ\", [Sales_CQ] - [Sales_PQ]), [QoQ], DESC)"
+    },
+    {
+      "id": 16,
+      "question": "Where is revenue concentration risk highest?",
+      "queryKey": "concentration_risk_customers",
+      "daxTemplate": "EVALUATE TOPN(10, ADDCOLUMNS(SUMMARIZECOLUMNS(<CUSTOMER_TABLE>[Customer], \"NetSales\", <MEASURE_NET_SALES>), \"Share\", DIVIDE([NetSales], CALCULATE(<MEASURE_NET_SALES>, ALL(<CUSTOMER_TABLE>[Customer])))), [Share], DESC)"
+    },
+    {
+      "id": 17,
+      "question": "What is net sales trend by month for last 12 months?",
+      "queryKey": "trend_12m",
+      "daxTemplate": "EVALUATE SUMMARIZECOLUMNS(<DATE_TABLE>[YearMonth], DATESINPERIOD(<DATE_TABLE>[Date], MAX(<DATE_TABLE>[Date]), -12, MONTH), \"NetSales\", <MEASURE_NET_SALES>)"
+    },
+    {
+      "id": 18,
+      "question": "Which SKUs are newly emerging this period?",
+      "queryKey": "emerging_skus",
+      "daxTemplate": "EVALUATE TOPN(20, ADDCOLUMNS(SUMMARIZECOLUMNS(<PRODUCT_TABLE>[Product]), \"Sales_CM\", CALCULATE(<MEASURE_NET_SALES>, DATESMTD(<DATE_TABLE>[Date])), \"Sales_PM\", CALCULATE(<MEASURE_NET_SALES>, DATEADD(DATESMTD(<DATE_TABLE>[Date]), -1, MONTH)), \"Emergence\", [Sales_CM] - [Sales_PM]), [Emergence], DESC)"
+    },
+    {
+      "id": 19,
+      "question": "Which products are margin dilutive?",
+      "queryKey": "margin_dilutive_products",
+      "daxTemplate": "EVALUATE TOPN(20, SUMMARIZECOLUMNS(<PRODUCT_TABLE>[Product], \"MarginPct\", <MEASURE_MARGIN_PCT>, \"NetSales\", <MEASURE_NET_SALES>), [MarginPct], ASC)"
+    },
+    {
+      "id": 20,
+      "question": "What are the top opportunities if revenue drops 10%?",
+      "queryKey": "risk_opportunity_map",
+      "daxTemplate": "EVALUATE TOPN(20, ADDCOLUMNS(SUMMARIZECOLUMNS(<PRODUCT_TABLE>[Product], \"NetSales\", <MEASURE_NET_SALES>, \"MarginPct\", <MEASURE_MARGIN_PCT>), \"RiskImpact10Pct\", [NetSales] * 0.10, \"PriorityScore\", [NetSales] * (1 - [MarginPct])), [PriorityScore], DESC)"
+    }
+  ]
+}

@@ -4,6 +4,7 @@ import { selectBestModel } from '@/lib/llm/router';
 import { clientFor } from '@/lib/llm/factory';
 import { analyzeFabricNeeds } from '@/lib/fabric/analyzer';
 import { generateDAXQuery } from '@/lib/fabric/dax-generator';
+import { matchQueryCatalog } from '@/lib/fabric/catalog-matcher';
 import { getFabricClient } from '@/lib/fabric/client';
 
 interface ChatRequestBody {
@@ -45,11 +46,20 @@ export async function POST(request: NextRequest) {
 
         // Step 3: If Fabric data is needed, fetch it and re-answer
         if (fabricNeeds.isNeeded) {
+          const catalogMatch = await matchQueryCatalog(question, analysis.entities);
+          if (catalogMatch.matched) {
+            console.log('🎯 Catalog match:', catalogMatch.queryKey, `(confidence: ${catalogMatch.confidence})`);
+          } else {
+            console.log('🔧 No catalog match — generating custom DAX from rules');
+          }
+
           const daxQuery = await generateDAXQuery(
             question,
             analysis.entities,
-            analysis.semanticModel
+            analysis.semanticModel,
+            catalogMatch
           );
+          console.log('📊 Generated DAX query:', daxQuery);
 
           const fabricClient = getFabricClient();
           const fabricResults = await fabricClient.executeDAX(

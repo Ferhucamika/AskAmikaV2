@@ -63,11 +63,7 @@ export default function ChatInterface() {
     return null;
   }, [messages]);
 
-  const handleConveneCouncil = async () => {
-    if (!lastUserQuestion) {
-      alert('Ask a question first, then convene the Council.');
-      return;
-    }
+  const runCouncil = async (question: string) => {
     if (councilModelIds.length < 3) {
       alert('Pick at least 3 models for the Council.');
       return;
@@ -78,7 +74,7 @@ export default function ChatInterface() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          question: lastUserQuestion,
+          question,
           modelIds: councilModelIds,
         }),
       });
@@ -90,6 +86,25 @@ export default function ChatInterface() {
     } finally {
       setCouncilLoading(false);
     }
+  };
+
+  const handleConveneCouncil = async () => {
+    if (!lastUserQuestion) {
+      alert('Type a question and click "Convene Council" to start a fresh council, or click here after asking a question to revisit it with the council.');
+      return;
+    }
+    await runCouncil(lastUserQuestion);
+  };
+
+  const handleConveneCouncilFromInput = async (question: string) => {
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      role: 'user',
+      content: question,
+      timestamp: new Date(),
+    };
+    setMessages((prev) => [...prev, userMessage]);
+    await runCouncil(question);
   };
 
   const handleClearChat = () => {
@@ -307,7 +322,12 @@ export default function ChatInterface() {
               )}
             </div>
           </div>
-          <QuestionInput onSubmit={handleQuestionSubmit} isLoading={isLoading} />
+          <QuestionInput
+            onSubmit={handleQuestionSubmit}
+            onConveneCouncil={handleConveneCouncilFromInput}
+            isLoading={isLoading}
+            isCouncilLoading={councilLoading}
+          />
         </div>
       </footer>
     </div>

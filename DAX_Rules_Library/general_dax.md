@@ -85,6 +85,24 @@ Apply with `KEEPFILTERS('sps_activity'[SPS_Retailer_Name_key] = ...)`:
 
 ---
 
+## Default Time Windows
+
+When the user does NOT specify a time scope, use these defaults — **do NOT default to YTD**:
+
+| Question phrasing | Default window |
+|---|---|
+| "top products / locations growth vs LY" | **Latest completed month vs same month last year** |
+| "top products / locations decline vs LY" | Latest completed month vs same month last year |
+| "top products / locations in the last 3 months" | Trailing 3-month window anchored on latest non-blank date |
+| "trend" | 8-week or 13-week window |
+| "last week" / "this week" | Latest completed week (`_EndDate` to `_EndDate - 6`) vs same week LY shifted by 364 days |
+| "current quarter" / "QTD" | `DATESQTD` |
+| "this year" / "YTD" — only when user EXPLICITLY says YTD | `DATESYTD` |
+
+YTD vs LY-YTD windows often produce 0 rows because LY-equivalent date ranges may extend into the future or because data lags reduce overlap. Use month windows by default for "vs LY" questions.
+
+**Do NOT add filters like `[LYUnits] > 0 && NOT ISBLANK([LYUnits])`.** Products that didn't sell last year (new launches) are valid growth candidates and should appear in the result. Rank by `DeltaVsLY` directly; the answer is more useful when newcomers are visible.
+
 ## Time Logic
 
 - Anchor `_EndDate` from latest non-blank metric date:

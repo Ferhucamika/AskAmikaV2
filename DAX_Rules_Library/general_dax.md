@@ -130,6 +130,37 @@ YTD vs LY-YTD windows often produce 0 rows because LY-equivalent date ranges may
 
 ---
 
+## SUMMARIZECOLUMNS + Retailer Filter — CRITICAL PATTERN
+
+`SUMMARIZECOLUMNS` arguments are **group-by columns, filter tables, and named expressions** — NOT boolean expressions.
+
+**WRONG** (will throw "A single value for column 'X' cannot be determined"):
+```
+SUMMARIZECOLUMNS(
+  'sps_activity'[SPS_ITEM_MAPPING_KEY],
+  KEEPFILTERS('sps_activity'[SPS_Retailer_Name_key] IN {"Sephora", "Sephora Canada"}),  -- ❌ NOT a filter table
+  "Units", SUM('sps_activity'[Gross_Sales_Units])
+)
+```
+
+**RIGHT** — wrap the whole SUMMARIZECOLUMNS in `CALCULATETABLE` with KEEPFILTERS as an argument:
+```
+CALCULATETABLE(
+  SUMMARIZECOLUMNS(
+    'sps_activity'[SPS_ITEM_MAPPING_KEY],
+    FILTER(ALL('sps_activity'[Period ending date]),
+      'sps_activity'[Period ending date] >= _StartDate &&
+      'sps_activity'[Period ending date] <= _EndDate),
+    "Units", SUM('sps_activity'[Gross_Sales_Units])
+  ),
+  KEEPFILTERS('sps_activity'[SPS_Retailer_Name_key] IN {"Sephora", "Sephora Canada"})
+)
+```
+
+`CALCULATETABLE` accepts boolean filters via KEEPFILTERS. `SUMMARIZECOLUMNS` does not.
+
+Date filters using `FILTER(ALL(...), ...)` ARE valid filter tables and stay inside `SUMMARIZECOLUMNS`. Only the retailer/boolean-style filters must move outward into `CALCULATETABLE`.
+
 ## Common Patterns
 
 ### Top N ranking

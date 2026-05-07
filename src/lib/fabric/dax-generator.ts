@@ -27,6 +27,7 @@ Hard requirements:
 - Output starts with EVALUATE (no markdown, no backticks, no comments).
 - Use only known tables/columns from the reference rules.
 - Apply the correct retailer filter (KEEPFILTERS) and metric column for the requested grain.
+- **NEVER pass KEEPFILTERS(<column> IN {...}) as a direct argument to SUMMARIZECOLUMNS** — that is not a valid filter table and will throw "A single value for column X cannot be determined". Wrap the SUMMARIZECOLUMNS in CALCULATETABLE and put KEEPFILTERS retailer filters as CALCULATETABLE arguments. See the "SUMMARIZECOLUMNS + Retailer Filter — CRITICAL PATTERN" section in the reference rules.
 - Sephora item/product-level queries are units-only — never use sales dollars at Sephora item grain.
 - If the user did NOT specify a time scope, use the "Default Time Windows" table from the reference rules. **Do NOT default to YTD vs LY-YTD** — that combination produces empty results when LY data lags. For "vs LY" questions, default to latest completed month vs same month LY.
 - Do NOT add filters that hide products with blank or zero LY values (e.g. \`[LYUnits] > 0\`, \`NOT ISBLANK([LYUnits])\`). New launches are valid growth signals and must appear in the result. Rank by absolute delta directly.

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Artifact, Message } from '@/lib/types';
 import { detectArtifacts } from '@/lib/artifacts/detector';
 import { createSessionDocument, SessionDocument } from '@/lib/storage/schemas';
@@ -16,6 +16,8 @@ const DEFAULT_COUNCIL_IDS = ['claude-opus', 'claude-sonnet', 'openai-flagship'];
 
 const PILOT_USER_ID = 'pilot-user'; // Replace with the authenticated user's id once MSAL is fully wired.
 
+type ChatMode = 'auto' | 'council';
+
 export default function ChatInterface() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -30,6 +32,7 @@ export default function ChatInterface() {
   } | null>(null);
   const [councilModelIds, setCouncilModelIds] = useState<string[]>(DEFAULT_COUNCIL_IDS);
   const [councilLoading, setCouncilLoading] = useState(false);
+  const [mode, setMode] = useState<ChatMode>('auto');
 
   useEffect(() => {
     setSession(createSessionDocument(PILOT_USER_ID));
@@ -56,13 +59,6 @@ export default function ChatInterface() {
     });
   }, [messages, isLoading, session]);
 
-  const lastUserQuestion = useMemo(() => {
-    for (let i = messages.length - 1; i >= 0; i--) {
-      if (messages[i].role === 'user') return messages[i].content;
-    }
-    return null;
-  }, [messages]);
-
   const runCouncil = async (question: string) => {
     if (councilModelIds.length < 3) {
       alert('Pick at least 3 models for the Council.');
@@ -86,14 +82,6 @@ export default function ChatInterface() {
     } finally {
       setCouncilLoading(false);
     }
-  };
-
-  const handleConveneCouncil = async () => {
-    if (!lastUserQuestion) {
-      alert('Type a question and click "Convene Council" to start a fresh council, or click here after asking a question to revisit it with the council.');
-      return;
-    }
-    await runCouncil(lastUserQuestion);
   };
 
   const handleConveneCouncilFromInput = async (question: string) => {
@@ -267,69 +255,130 @@ export default function ChatInterface() {
       </main>
 
       <footer
-        className="p-6 border-t"
+        className="border-t bg-white"
         style={{ borderColor: 'var(--amika-gray-light)' }}
       >
-        <div className="max-w-4xl mx-auto">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <label className="text-sm font-medium" style={{ color: 'var(--amika-gray-text)' }}>
-                Model:
-              </label>
-              <ModelSelector
-                selectedModelId={selectedModelId}
-                onChange={setSelectedModelId}
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <CouncilModelPicker
-                selectedIds={councilModelIds}
-                onChange={setCouncilModelIds}
-              />
-              <button
-                onClick={handleConveneCouncil}
-                className="btn-primary text-sm"
-                disabled={councilLoading}
-              >
-                {councilLoading ? 'Convening...' : 'Convene Council'}
-              </button>
-              <button
-                onClick={handleClearChat}
-                className="text-sm px-3 py-1 rounded"
-                disabled={isLoading || councilLoading || (messages.length === 0 && !councilResults)}
-                style={{
-                  backgroundColor: 'var(--amika-gray-light)',
-                  color: 'var(--amika-gray-text)',
-                  opacity:
-                    isLoading || councilLoading || (messages.length === 0 && !councilResults)
-                      ? 0.5
-                      : 1,
-                }}
-              >
-                Clear Chat
-              </button>
+        <div className="max-w-4xl mx-auto px-6 pt-3 pb-5">
+          <div className="flex flex-wrap items-center gap-3 mb-3">
+            <ModeToggle mode={mode} onChange={setMode} />
+
+            <div
+              className="h-6 w-px"
+              style={{ backgroundColor: 'var(--amika-gray-light)' }}
+              aria-hidden
+            />
+
+            {mode === 'auto' ? (
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-medium uppercase tracking-wide" style={{ color: 'var(--amika-gray-text)' }}>
+                  Model
+                </span>
+                <ModelSelector
+                  selectedModelId={selectedModelId}
+                  onChange={setSelectedModelId}
+                />
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-medium uppercase tracking-wide" style={{ color: 'var(--amika-gray-text)' }}>
+                  Council
+                </span>
+                <CouncilModelPicker
+                  selectedIds={councilModelIds}
+                  onChange={setCouncilModelIds}
+                />
+              </div>
+            )}
+
+            <div className="ml-auto flex items-center gap-2">
               {showCouncil && (
                 <button
                   onClick={() => setShowCouncil(false)}
-                  className="text-sm px-3 py-1 rounded"
+                  className="text-xs px-3 py-1.5 rounded-md hover:opacity-80"
                   style={{
                     backgroundColor: 'var(--amika-gray-light)',
                     color: 'var(--amika-gray-text)',
                   }}
                 >
-                  Hide Council
+                  Hide council
                 </button>
               )}
+              <button
+                onClick={handleClearChat}
+                disabled={isLoading || councilLoading || (messages.length === 0 && !councilResults)}
+                className="text-xs px-3 py-1.5 rounded-md hover:opacity-80 disabled:opacity-40"
+                style={{
+                  backgroundColor: 'var(--amika-gray-light)',
+                  color: 'var(--amika-gray-text)',
+                }}
+              >
+                Clear chat
+              </button>
             </div>
           </div>
+
           <QuestionInput
-            onSubmit={handleQuestionSubmit}
-            onConveneCouncil={handleConveneCouncilFromInput}
-            isLoading={isLoading}
-            isCouncilLoading={councilLoading}
+            onSubmit={mode === 'auto' ? handleQuestionSubmit : handleConveneCouncilFromInput}
+            isLoading={mode === 'auto' ? isLoading : councilLoading}
+            submitLabel={mode === 'auto' ? 'Send' : 'Convene Council'}
+            loadingLabel={mode === 'auto' ? 'Processing…' : 'Convening…'}
+            placeholder={
+              mode === 'auto'
+                ? 'Ask me anything…'
+                : 'Ask the Council — multiple models will answer in parallel…'
+            }
           />
         </div>
       </footer>
+    </div>
+  );
+}
+
+function ModeToggle({
+  mode,
+  onChange,
+}: {
+  mode: ChatMode;
+  onChange: (m: ChatMode) => void;
+}) {
+  const baseClass =
+    'px-3 py-1.5 text-xs font-semibold rounded-md transition-colors whitespace-nowrap';
+  return (
+    <div
+      role="group"
+      aria-label="Response mode"
+      className="inline-flex items-center p-1 rounded-lg border"
+      style={{
+        borderColor: 'var(--amika-gray-light)',
+        backgroundColor: 'var(--amika-gray-light)',
+      }}
+    >
+      <button
+        type="button"
+        onClick={() => onChange('auto')}
+        aria-pressed={mode === 'auto'}
+        className={baseClass}
+        style={{
+          backgroundColor: mode === 'auto' ? 'white' : 'transparent',
+          color: mode === 'auto' ? 'var(--amika-orange)' : 'var(--amika-gray-text)',
+          boxShadow: mode === 'auto' ? '0 1px 2px rgba(0,0,0,0.06)' : 'none',
+        }}
+      >
+        Auto
+      </button>
+      <button
+        type="button"
+        onClick={() => onChange('council')}
+        aria-pressed={mode === 'council'}
+        className={baseClass}
+        style={{
+          backgroundColor: mode === 'council' ? 'white' : 'transparent',
+          color: mode === 'council' ? 'var(--amika-orange)' : 'var(--amika-gray-text)',
+          boxShadow: mode === 'council' ? '0 1px 2px rgba(0,0,0,0.06)' : 'none',
+        }}
+      >
+        Council
+      </button>
     </div>
   );
 }

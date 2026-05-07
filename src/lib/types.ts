@@ -21,13 +21,6 @@ export interface QuestionAnalysis {
   entities: string[];
 }
 
-export interface FabricAnalysisResult {
-  isNeeded: boolean;
-  reason: string;
-  modelName?: string;
-  suggestedQuery?: string;
-}
-
 export interface FabricQueryResult {
   modelName: string;
   query: string;

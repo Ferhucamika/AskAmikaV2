@@ -6,7 +6,6 @@ const {
   mockOpenAIStream,
   ClaudeClientCtor,
   OpenAIClientCtor,
-  mockAnalyzeFabricNeeds,
   mockGenerateDAX,
   mockExecuteDAX,
   mockMatchCatalog,
@@ -16,7 +15,6 @@ const {
   mockOpenAIStream: vi.fn(),
   ClaudeClientCtor: vi.fn(),
   OpenAIClientCtor: vi.fn(),
-  mockAnalyzeFabricNeeds: vi.fn(),
   mockGenerateDAX: vi.fn(),
   mockExecuteDAX: vi.fn(),
   mockMatchCatalog: vi.fn(),
@@ -38,10 +36,6 @@ vi.mock('@/lib/llm/clients/openai', () => ({
     model,
     stream: mockOpenAIStream,
   })),
-}));
-
-vi.mock('@/lib/fabric/analyzer', () => ({
-  analyzeFabricNeeds: mockAnalyzeFabricNeeds,
 }));
 
 vi.mock('@/lib/fabric/dax-generator', () => ({
@@ -68,7 +62,6 @@ beforeEach(() => {
   mockOpenAIStream.mockReset();
   ClaudeClientCtor.mockClear();
   OpenAIClientCtor.mockClear();
-  mockAnalyzeFabricNeeds.mockReset();
   mockGenerateDAX.mockReset();
   mockExecuteDAX.mockReset();
   mockMatchCatalog.mockReset();
@@ -142,7 +135,7 @@ describe('POST /api/chat', () => {
     expect(response.status).toBe(500);
   });
 
-  test('invokes catalog matcher and Fabric flow when business context + needs data', async () => {
+  test('invokes catalog matcher and Fabric flow when business context is detected', async () => {
     mockAnalyze.mockResolvedValue({
       isBusinessContext: true,
       confidence: 0.95,
@@ -151,10 +144,6 @@ describe('POST /api/chat', () => {
     mockClaudeStream
       .mockReturnValueOnce(yieldChunks(['initial ', 'response']))
       .mockReturnValueOnce(yieldChunks(['enhanced ', 'with data']));
-    mockAnalyzeFabricNeeds.mockResolvedValue({
-      isNeeded: true,
-      reason: 'Lacks real data',
-    });
     mockMatchCatalog.mockResolvedValue({
       matched: true,
       queryKey: 'sephora_top_products_growth_units_ly',

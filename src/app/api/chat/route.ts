@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { analyzeQuestion } from '@/lib/mcp/analyzer';
 import { selectBestModel } from '@/lib/llm/router';
 import { clientFor } from '@/lib/llm/factory';
-import { analyzeFabricNeeds } from '@/lib/fabric/analyzer';
 import { generateDAXQuery } from '@/lib/fabric/dax-generator';
 import { matchQueryCatalog } from '@/lib/fabric/catalog-matcher';
 import {
@@ -38,59 +37,48 @@ export async function POST(request: NextRequest) {
       initialResponse += chunk;
     }
 
-    // Step 2: Check if Fabric data is needed (only for business context)
+    // Step 2: For business context questions, always query Fabric for real data
     let finalResponse = initialResponse;
     if (analysis.isBusinessContext) {
       try {
         const datasetName = getFabricDatasetName();
         const datasetId = getFabricDatasetId();
 
-        const fabricNeeds = await analyzeFabricNeeds(
+        const catalogMatch = await matchQueryCatalog(question, analysis.entities);
+        if (catalogMatch.matched) {
+          console.log('🎯 Catalog match:', catalogMatch.queryKey, `(confidence: ${catalogMatch.confidence})`);
+        } else {
+          console.log('🔧 No catalog match — generating custom DAX from rules');
+        }
+
+        const daxQuery = await generateDAXQuery(
           question,
-          initialResponse,
-          datasetName
+          analysis.entities,
+          datasetName,
+          catalogMatch
         );
+        console.log('📊 Generated DAX query:', daxQuery);
 
-        // Step 3: If Fabric data is needed, fetch it and re-answer
-        if (fabricNeeds.isNeeded) {
-          const catalogMatch = await matchQueryCatalog(question, analysis.entities);
-          if (catalogMatch.matched) {
-            console.log('🎯 Catalog match:', catalogMatch.queryKey, `(confidence: ${catalogMatch.confidence})`);
-          } else {
-            console.log('🔧 No catalog match — generating custom DAX from rules');
-          }
+        const fabricClient = getFabricClient();
+        const fabricResults = await fabricClient.executeDAX(datasetId, daxQuery);
+        console.log('✅ Fabric returned', fabricResults.result.length, 'rows');
 
-          const daxQuery = await generateDAXQuery(
-            question,
-            analysis.entities,
-            datasetName,
-            catalogMatch
-          );
-          console.log('📊 Generated DAX query:', daxQuery);
+        // Step 3: Re-prompt LLM with Fabric data for enhanced answer
+        const enhancedPrompt = `Original question: ${question}
 
-          const fabricClient = getFabricClient();
-          const fabricResults = await fabricClient.executeDAX(datasetId, daxQuery);
-
-          // Step 4: Re-prompt LLM with Fabric data for enhanced answer
-          const enhancedPrompt = `Original question: ${question}
-
-Your initial response was:
-${initialResponse}
-
-Here is relevant data from our business system (${datasetName}):
+Here is the relevant data from our business system (${datasetName}):
 ${JSON.stringify(fabricResults.result, null, 2)}
 
-Please provide an enhanced answer that incorporates this real business data. Be specific and reference the actual data points.`;
+Provide a clear, specific answer to the original question using the data above. Reference actual numbers, products, stores, or regions from the data. If the data is empty or doesn't answer the question, say so plainly.`;
 
-          let enhancedResponse = '';
-          for await (const chunk of client.stream([
-            { role: 'user', content: enhancedPrompt },
-          ])) {
-            enhancedResponse += chunk;
-          }
-
-          finalResponse = enhancedResponse;
+        let enhancedResponse = '';
+        for await (const chunk of client.stream([
+          { role: 'user', content: enhancedPrompt },
+        ])) {
+          enhancedResponse += chunk;
         }
+
+        finalResponse = enhancedResponse;
       } catch (fabricError) {
         console.error('Error in Fabric routing:', fabricError);
         // Fall back to initial response if Fabric fails

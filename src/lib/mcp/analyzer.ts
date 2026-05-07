@@ -1,5 +1,6 @@
 import { Anthropic } from '@anthropic-ai/sdk';
 import { QuestionAnalysis } from '@/lib/types';
+import { extractJSON } from '@/lib/llm/json-parser';
 
 const ANALYSIS_PROMPT = `You are a question classifier for a business intelligence system. Analyze the following question and determine:
 1. Is it about business/company data? (yes/no)
@@ -50,13 +51,7 @@ export async function analyzeQuestion(question: string): Promise<QuestionAnalysi
     throw new Error('Unexpected response type from Anthropic');
   }
 
-  let jsonText = block.text.trim();
-  const jsonMatch = jsonText.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
-  if (jsonMatch) {
-    jsonText = jsonMatch[1];
-  }
-
-  const analysis = JSON.parse(jsonText) as RawAnalysis;
+  const analysis = extractJSON<RawAnalysis>(block.text);
 
   return {
     isBusinessContext: analysis.isBusinessContext,

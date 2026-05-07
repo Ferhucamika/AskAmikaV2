@@ -1,5 +1,6 @@
 import { Anthropic } from '@anthropic-ai/sdk';
 import { CatalogMatchResult } from '@/lib/types';
+import { extractJSON } from '@/lib/llm/json-parser';
 import { loadQueryCatalog } from './rules-loader';
 
 let client: Anthropic | null = null;
@@ -67,13 +68,11 @@ export async function matchQueryCatalog(
     return { matched: false, confidence: 0 };
   }
 
-  let jsonText = block.text.trim();
-  const jsonMatch = jsonText.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
-  if (jsonMatch) jsonText = jsonMatch[1];
-
   let parsed: { queryKey: string; confidence: number; reason?: string };
   try {
-    parsed = JSON.parse(jsonText);
+    parsed = extractJSON<{ queryKey: string; confidence: number; reason?: string }>(
+      block.text
+    );
   } catch {
     return { matched: false, confidence: 0 };
   }

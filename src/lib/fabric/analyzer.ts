@@ -1,5 +1,6 @@
 import { Anthropic } from '@anthropic-ai/sdk';
 import { FabricAnalysisResult, QuestionAnalysis } from '@/lib/types';
+import { extractJSON } from '@/lib/llm/json-parser';
 
 let client: Anthropic | null = null;
 
@@ -45,7 +46,7 @@ export async function analyzeFabricNeeds(
 
   const response = await getClient().messages.create({
     model: 'claude-haiku-4-5-20251001',
-    max_tokens: 150,
+    max_tokens: 400,
     messages: [
       {
         role: 'user',
@@ -59,13 +60,7 @@ export async function analyzeFabricNeeds(
     throw new Error('Unexpected response from Haiku');
   }
 
-  let jsonText = block.text.trim();
-  const jsonMatch = jsonText.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
-  if (jsonMatch) {
-    jsonText = jsonMatch[1];
-  }
-
-  const result = JSON.parse(jsonText) as { isNeeded: boolean; reason: string };
+  const result = extractJSON<{ isNeeded: boolean; reason: string }>(block.text);
 
   return {
     isNeeded: result.isNeeded,

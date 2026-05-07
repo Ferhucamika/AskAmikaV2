@@ -1,5 +1,5 @@
 import { Anthropic } from '@anthropic-ai/sdk';
-import { FabricAnalysisResult, QuestionAnalysis } from '@/lib/types';
+import { FabricAnalysisResult } from '@/lib/types';
 import { extractJSON } from '@/lib/llm/json-parser';
 
 let client: Anthropic | null = null;
@@ -11,38 +11,32 @@ function getClient(): Anthropic {
   return client;
 }
 
-const NEEDS_ANALYSIS_PROMPT = `You are analyzing whether an LLM response would benefit from live business data.
+const NEEDS_ANALYSIS_PROMPT = `You are deciding whether to query Amika's live business data (semantic model: {modelName}) to improve an LLM response.
 
 Original question: {question}
-LLM response: {llmResponse}
-Available semantic model: {modelName}
+LLM response so far: {llmResponse}
 
-Analyze the LLM response and determine:
-1. Does it acknowledge lack of access to real-time company data? (phrases like "I don't have access to...", "I don't have real-time data")
-2. Does it provide vague or general information that specific data could improve?
-3. Would querying the semantic model directly answer the question better?
+Decide YES if any of these hold:
+- The response acknowledges lack of access to real data ("I don't have access to...", "I can't pull...", "you'd need access to...")
+- The response is generic/vague where specific Amika sales/units/inventory/goal data would directly answer the question
+- The question explicitly asks about Amika sales, products, stores, regions, retailers, units, goals, or inventory
 
-Respond in JSON format:
+Decide NO if the question is general knowledge, definitions, casual chat, or unrelated to Amika's business data.
+
+Respond in JSON only (no markdown):
 {
   "isNeeded": boolean,
-  "reason": "explanation of why data is or isn't needed"
+  "reason": "one short sentence"
 }`;
 
 export async function analyzeFabricNeeds(
   question: string,
   llmResponse: string,
-  analysis: QuestionAnalysis
+  datasetName: string
 ): Promise<FabricAnalysisResult> {
-  if (!analysis.semanticModel) {
-    return {
-      isNeeded: false,
-      reason: 'No semantic model identified for this question',
-    };
-  }
-
   const prompt = NEEDS_ANALYSIS_PROMPT.replace('{question}', question)
     .replace('{llmResponse}', llmResponse)
-    .replace('{modelName}', analysis.semanticModel);
+    .replace('{modelName}', datasetName);
 
   const response = await getClient().messages.create({
     model: 'claude-haiku-4-5-20251001',
@@ -65,6 +59,6 @@ export async function analyzeFabricNeeds(
   return {
     isNeeded: result.isNeeded,
     reason: result.reason,
-    modelName: analysis.semanticModel,
+    modelName: datasetName,
   };
 }

@@ -56,6 +56,8 @@ vi.mock('@/lib/fabric/client', () => ({
   getFabricClient: () => ({
     executeDAX: mockExecuteDAX,
   }),
+  getFabricDatasetId: () => 'dataset-guid-test',
+  getFabricDatasetName: () => 'amika POS Sales',
 }));
 
 import { POST } from '@/app/api/chat/route';
@@ -145,7 +147,6 @@ describe('POST /api/chat', () => {
       isBusinessContext: true,
       confidence: 0.95,
       entities: ['Sephora', 'products', 'growth'],
-      semanticModel: 'sales_analytics',
     });
     mockClaudeStream
       .mockReturnValueOnce(yieldChunks(['initial ', 'response']))
@@ -161,7 +162,7 @@ describe('POST /api/chat', () => {
     });
     mockGenerateDAX.mockResolvedValue('EVALUATE TOPN(...)');
     mockExecuteDAX.mockResolvedValue({
-      modelName: 'sales_analytics',
+      modelName: 'amika POS Sales',
       query: 'EVALUATE TOPN(...)',
       result: [{ product: 'X', units: 100 }],
     });
@@ -179,9 +180,10 @@ describe('POST /api/chat', () => {
     expect(mockGenerateDAX).toHaveBeenCalledWith(
       'Top Sephora products growth',
       ['Sephora', 'products', 'growth'],
-      'sales_analytics',
+      'amika POS Sales',
       expect.objectContaining({ matched: true, queryKey: 'sephora_top_products_growth_units_ly' })
     );
+    expect(mockExecuteDAX).toHaveBeenCalledWith('dataset-guid-test', 'EVALUATE TOPN(...)');
     expect(await response.text()).toBe('enhanced with data');
   });
 });

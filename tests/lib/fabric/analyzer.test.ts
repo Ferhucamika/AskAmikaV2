@@ -25,16 +25,11 @@ describe('Fabric Analyzer', () => {
     const result = await analyzeFabricNeeds(
       'What was our Q3 revenue?',
       "I don't have access to your company's specific financial data...",
-      {
-        isBusinessContext: true,
-        confidence: 0.9,
-        entities: ['revenue', 'Q3'],
-        semanticModel: 'finance_analytics',
-      }
+      'amika POS Sales'
     );
 
     expect(result.isNeeded).toBe(true);
-    expect(result.modelName).toBe('finance_analytics');
+    expect(result.modelName).toBe('amika POS Sales');
   });
 
   test('should not need data when LLM response is complete', async () => {
@@ -50,29 +45,28 @@ describe('Fabric Analyzer', () => {
     const result = await analyzeFabricNeeds(
       'What was our Q3 revenue?',
       'Based on the data I have, your Q3 revenue was $2.5M...',
-      {
-        isBusinessContext: true,
-        confidence: 0.9,
-        entities: ['revenue', 'Q3'],
-        semanticModel: 'finance_analytics',
-      }
+      'amika POS Sales'
     );
 
     expect(result.isNeeded).toBe(false);
   });
 
-  test('should return false if no semantic model identified', async () => {
+  test('survives Haiku output that omits the closing markdown fence', async () => {
+    mockCreate.mockResolvedValueOnce({
+      content: [
+        {
+          type: 'text',
+          text: '```json\n{"isNeeded": true, "reason": "User asked about Sephora units"}',
+        },
+      ],
+    });
+
     const result = await analyzeFabricNeeds(
-      'What was our Q3 revenue?',
-      'Some response',
-      {
-        isBusinessContext: false,
-        confidence: 0.5,
-        entities: [],
-      }
+      'top Sephora products growth vs LY by units',
+      "I don't have access...",
+      'amika POS Sales'
     );
 
-    expect(result.isNeeded).toBe(false);
-    expect(result.reason).toContain('No semantic model');
+    expect(result.isNeeded).toBe(true);
   });
 });

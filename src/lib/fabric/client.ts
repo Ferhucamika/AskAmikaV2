@@ -120,3 +120,17 @@ export function resetFabricCache(): void {
   tokenExpiryTime = 0;
   fabricClient = null;
 }
+
+export function getFabricDatasetId(): string {
+  const id = process.env.FABRIC_DATASET_ID;
+  if (!id) {
+    throw new Error(
+      'Missing FABRIC_DATASET_ID — set it to the Power BI dataset GUID for the configured semantic model'
+    );
+  }
+  return id;
+}
+
+export function getFabricDatasetName(): string {
+  return process.env.FABRIC_DATASET_NAME || 'amika POS Sales';
+}

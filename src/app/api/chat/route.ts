@@ -5,7 +5,11 @@ import { clientFor } from '@/lib/llm/factory';
 import { analyzeFabricNeeds } from '@/lib/fabric/analyzer';
 import { generateDAXQuery } from '@/lib/fabric/dax-generator';
 import { matchQueryCatalog } from '@/lib/fabric/catalog-matcher';
-import { getFabricClient } from '@/lib/fabric/client';
+import {
+  getFabricClient,
+  getFabricDatasetId,
+  getFabricDatasetName,
+} from '@/lib/fabric/client';
 
 interface ChatRequestBody {
   question?: string;
@@ -36,12 +40,15 @@ export async function POST(request: NextRequest) {
 
     // Step 2: Check if Fabric data is needed (only for business context)
     let finalResponse = initialResponse;
-    if (analysis.isBusinessContext && analysis.semanticModel) {
+    if (analysis.isBusinessContext) {
       try {
+        const datasetName = getFabricDatasetName();
+        const datasetId = getFabricDatasetId();
+
         const fabricNeeds = await analyzeFabricNeeds(
           question,
           initialResponse,
-          analysis
+          datasetName
         );
 
         // Step 3: If Fabric data is needed, fetch it and re-answer
@@ -56,16 +63,13 @@ export async function POST(request: NextRequest) {
           const daxQuery = await generateDAXQuery(
             question,
             analysis.entities,
-            analysis.semanticModel,
+            datasetName,
             catalogMatch
           );
           console.log('📊 Generated DAX query:', daxQuery);
 
           const fabricClient = getFabricClient();
-          const fabricResults = await fabricClient.executeDAX(
-            analysis.semanticModel,
-            daxQuery
-          );
+          const fabricResults = await fabricClient.executeDAX(datasetId, daxQuery);
 
           // Step 4: Re-prompt LLM with Fabric data for enhanced answer
           const enhancedPrompt = `Original question: ${question}
@@ -73,7 +77,7 @@ export async function POST(request: NextRequest) {
 Your initial response was:
 ${initialResponse}
 
-Here is relevant data from our business system (${analysis.semanticModel}):
+Here is relevant data from our business system (${datasetName}):
 ${JSON.stringify(fabricResults.result, null, 2)}
 
 Please provide an enhanced answer that incorporates this real business data. Be specific and reference the actual data points.`;

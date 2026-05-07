@@ -19,7 +19,6 @@ export interface QuestionAnalysis {
   isBusinessContext: boolean;
   confidence: number;
   entities: string[];
-  semanticModel?: string;
 }
 
 export interface FabricAnalysisResult {

@@ -83,7 +83,7 @@ export class FabricClient {
       }
 
       const data = await result.json();
-      const queryResults = data.results[0]?.result ?? [];
+      const queryResults = data.results?.[0]?.tables?.[0]?.rows ?? [];
 
       return {
         modelName: modelId,

@@ -16,9 +16,13 @@ describe('FabricClient', () => {
     const queryResponse = {
       results: [
         {
-          result: [
-            { region: 'North', revenue: 1000000 },
-            { region: 'South', revenue: 850000 },
+          tables: [
+            {
+              rows: [
+                { region: 'North', revenue: 1000000 },
+                { region: 'South', revenue: 850000 },
+              ],
+            },
           ],
         },
       ],
@@ -39,6 +43,7 @@ describe('FabricClient', () => {
 
     expect(result.modelName).toBe('sales_analytics');
     expect(result.result).toHaveLength(2);
+    expect(result.result[0]).toEqual({ region: 'North', revenue: 1000000 });
     expect(global.fetch).toHaveBeenCalledTimes(2);
   });
 
@@ -83,7 +88,7 @@ describe('FabricClient', () => {
     };
 
     const queryResponse = {
-      results: [{ result: [] }],
+      results: [{ tables: [{ rows: [] }] }],
     };
 
     global.fetch = vi.fn()

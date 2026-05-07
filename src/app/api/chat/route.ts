@@ -64,12 +64,26 @@ export async function POST(request: NextRequest) {
         console.log('✅ Fabric returned', fabricResults.result.length, 'rows');
 
         // Step 3: Re-prompt LLM with Fabric data for enhanced answer
-        const enhancedPrompt = `Original question: ${question}
+        const enhancedPrompt = `You are answering an executive's question using real data from Amika's POS sales system (${datasetName}).
 
-Here is the relevant data from our business system (${datasetName}):
+Original question: ${question}
+
+Data returned (${fabricResults.result.length} rows):
 ${JSON.stringify(fabricResults.result, null, 2)}
 
-Provide a clear, specific answer to the original question using the data above. Reference actual numbers, products, stores, or regions from the data. If the data is empty or doesn't answer the question, say so plainly.`;
+Format your response in this exact structure:
+
+1. **One-sentence headline** answering the question (e.g., "amika's top growth driver at Sephora is Frizz-Me-Not Styler with +10,111 units vs LY.").
+
+2. **A markdown table** with the data — use clean, readable column names (no internal keys like SPS_ITEM_MAPPING_KEY; show the product name instead). Format numbers with thousands separators (e.g., 10,111 not 10111). Keep the table compact — drop columns that are all blank or all zero unless they're meaningful.
+
+3. **2–4 brief bullet observations** ("Key Takeaways") highlighting the most useful patterns: top performer, surprises, anything an executive should notice. Reference specific numbers.
+
+Rules:
+- Be concise — executives skim.
+- Don't repeat the data after the table.
+- If the data is empty, say so plainly in one sentence and suggest a possible reason (no time-period match, no products in scope, etc.) — do not fabricate.
+- No "based on the data..." preamble. Lead with the answer.`;
 
         let enhancedResponse = '';
         for await (const chunk of client.stream([

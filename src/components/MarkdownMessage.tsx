@@ -1,6 +1,7 @@
 'use client';
 
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 interface MarkdownMessageProps {
   content: string;
@@ -10,6 +11,7 @@ export default function MarkdownMessage({ content }: MarkdownMessageProps) {
   return (
     <div className="prose prose-sm max-w-none">
       <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
         components={{
           h1: ({ children }) => (
             <h1 className="text-xl font-bold mt-3 mb-2">{children}</h1>
@@ -66,6 +68,52 @@ export default function MarkdownMessage({ content }: MarkdownMessageProps) {
             >
               {children}
             </blockquote>
+          ),
+          table: ({ children }) => (
+            <div className="overflow-x-auto my-3">
+              <table
+                className="min-w-full text-sm border-collapse border"
+                style={{ borderColor: 'var(--amika-gray-light)' }}
+              >
+                {children}
+              </table>
+            </div>
+          ),
+          thead: ({ children }) => (
+            <thead style={{ backgroundColor: 'var(--amika-gray-light)' }}>
+              {children}
+            </thead>
+          ),
+          tbody: ({ children }) => <tbody>{children}</tbody>,
+          tr: ({ children }) => (
+            <tr
+              className="border-b"
+              style={{ borderColor: 'var(--amika-gray-light)' }}
+            >
+              {children}
+            </tr>
+          ),
+          th: ({ children, style }) => (
+            <th
+              className="px-3 py-2 text-left font-semibold border"
+              style={{
+                borderColor: 'var(--amika-gray-light)',
+                ...(style || {}),
+              }}
+            >
+              {children}
+            </th>
+          ),
+          td: ({ children, style }) => (
+            <td
+              className="px-3 py-2 border align-top"
+              style={{
+                borderColor: 'var(--amika-gray-light)',
+                ...(style || {}),
+              }}
+            >
+              {children}
+            </td>
           ),
         }}
       >
